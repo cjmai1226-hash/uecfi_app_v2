@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "741354382245",
+    "project_id": "uecfi-zaoqsg",
+    "storage_bucket": "uecfi-zaoqsg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:741354382245:android:0c24175a97055e80a1be4c",
+        "android_client_info": {
+          "package_name": "com.uecfi.prayerapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "741354382245-b0idmpjluvt5j5pab1e5unneb7btjoe8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHNEkSimuzWaMiL_DKPJmY_pVTGoewaOw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "741354382245-b0idmpjluvt5j5pab1e5unneb7btjoe8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "741354382245-3d16phk6bb66k1m1334oe1r38496rbp7.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.cja.uecfi"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
