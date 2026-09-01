@@ -27,6 +27,7 @@ class UserService extends ValueNotifier<UserProfile> {
       position: prefs.getString('position') ?? 'Member',
       avatarPath: prefs.getString('avatarPath') ?? '',
       coverPath: prefs.getString('coverPath') ?? '',
+      contributions: prefs.getInt('contributions') ?? 0,
     );
   }
 
@@ -70,6 +71,7 @@ class UserService extends ValueNotifier<UserProfile> {
       position: position,
       avatarPath: value.avatarPath,
       coverPath: value.coverPath,
+      contributions: value.contributions,
     );
   }
 

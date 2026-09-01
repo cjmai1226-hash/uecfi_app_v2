@@ -3,6 +3,7 @@ import '../../services/database_helper.dart';
 import '../../services/prayer_language_service.dart';
 import '../../models/prayer_model.dart';
 import '../details/prayer_detail_screen.dart';
+import '../../services/ad_service.dart';
 
 class PrayersScreen extends StatefulWidget {
   const PrayersScreen({super.key});
@@ -55,6 +56,7 @@ class _PrayersScreenState extends State<PrayersScreen> {
       valueListenable: PrayerLanguageService.instance,
       builder: (context, langCode, child) {
         return Scaffold(
+          bottomNavigationBar: const AdBannerWidget(),
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _prayers.isEmpty

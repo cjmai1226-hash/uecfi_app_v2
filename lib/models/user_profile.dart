@@ -12,6 +12,7 @@ class UserProfile {
   final String position;
   final String avatarPath;
   final String coverPath;
+  final int contributions;
 
   const UserProfile({
     this.nickname = '',
@@ -27,6 +28,7 @@ class UserProfile {
     this.position = 'Member',
     this.avatarPath = '',
     this.coverPath = '',
+    this.contributions = 0,
   });
 
   bool get isComplete =>
@@ -54,6 +56,7 @@ class UserProfile {
     String? position,
     String? avatarPath,
     String? coverPath,
+    int? contributions,
   }) {
     return UserProfile(
       nickname: nickname ?? this.nickname,
@@ -69,6 +72,7 @@ class UserProfile {
       position: position ?? this.position,
       avatarPath: avatarPath ?? this.avatarPath,
       coverPath: coverPath ?? this.coverPath,
+      contributions: contributions ?? this.contributions,
     );
   }
 }

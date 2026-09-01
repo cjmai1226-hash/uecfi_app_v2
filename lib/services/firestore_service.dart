@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'user_service.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -13,15 +15,22 @@ class FirestoreService {
     required String content,
     required String authorEmail,
     required String authorNickname,
+    String? bgGradient,
   }) async {
-    await _firestore.collection('community_posts').add({
+    final Map<String, dynamic> data = {
       'content': content,
       'authorEmail': authorEmail,
       'authorNickname': authorNickname,
       'timestamp': FieldValue.serverTimestamp(),
       'likes': 0,
       'comments': 0,
-    });
+    };
+    if (bgGradient != null &&
+        bgGradient.isNotEmpty &&
+        bgGradient != 'default') {
+      data['bgGradient'] = bgGradient;
+    }
+    await _firestore.collection('community_posts').add(data);
   }
 
   // 1b. Update Post
@@ -29,13 +38,22 @@ class FirestoreService {
     required String postId,
     required String newContent,
     required String previousContent,
+    String? bgGradient,
   }) async {
-    await _firestore.collection('community_posts').doc(postId).update({
+    final Map<String, dynamic> data = {
       'content': newContent,
       'previousContent': previousContent,
       'editedAt': FieldValue.serverTimestamp(),
       'isEdited': true,
-    });
+    };
+    if (bgGradient != null) {
+      if (bgGradient.isNotEmpty && bgGradient != 'default') {
+        data['bgGradient'] = bgGradient;
+      } else {
+        data['bgGradient'] = FieldValue.delete();
+      }
+    }
+    await _firestore.collection('community_posts').doc(postId).update(data);
   }
 
   // 2. Submit Song
@@ -139,6 +157,42 @@ class FirestoreService {
     return null;
   }
 
+  // 4e. Increment User Contributions
+  Future<void> incrementUserContributions(String email) async {
+    if (email.isEmpty) return;
+    try {
+      final items = await getUserContributions(email);
+      final validContributionsCount = items
+          .where((item) => item['status'] != 'reported')
+          .length;
+      await syncUserContributionsCount(email, validContributionsCount);
+    } catch (e) {
+      debugPrint('Error incrementing user contributions: $e');
+    }
+  }
+
+  // 4f. Sync User Contributions Count (Self-healing backfill)
+  Future<void> syncUserContributionsCount(String email, int count) async {
+    if (email.isEmpty) return;
+    try {
+      final userRef = _firestore.collection('users').doc(email);
+      await userRef.update({'contributions': count});
+
+      // Synchronize locally if it is the current user
+      final currentProfile = UserService.instance.value;
+      if (currentProfile.email.toLowerCase() == email.toLowerCase()) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('contributions', count);
+        UserService.instance.value = currentProfile.copyWith(
+          contributions: count,
+        );
+        UserContributionsCache.updateCache(currentProfile.nickname, count);
+      }
+    } catch (e) {
+      debugPrint('Error syncing user contributions count: $e');
+    }
+  }
+
   // 5. Get Community Posts Stream
   Stream<QuerySnapshot> getCommunityPostsStream() {
     final threshold = DateTime.now().subtract(const Duration(days: 5));
@@ -158,7 +212,6 @@ class FirestoreService {
         .orderBy('timestamp', descending: true)
         .get();
   }
-
 
   // 6. Toggle Like (Increment/Decrement)
   Future<void> togglePostLike(
@@ -218,12 +271,30 @@ class FirestoreService {
     required String reason,
     required String reportedBy,
   }) async {
-    await _firestore.collection('community_posts').doc(postId).set({
+    final postRef = _firestore.collection('community_posts').doc(postId);
+
+    // Get authorEmail first to deduct points
+    String authorEmail = '';
+    try {
+      final snap = await postRef.get();
+      if (snap.exists) {
+        authorEmail = snap.data()?['authorEmail'] ?? '';
+      }
+    } catch (e) {
+      debugPrint('Error getting post author email: $e');
+    }
+
+    await postRef.set({
       'isReported': true,
       'reportReason': reason,
       'reportedBy': reportedBy,
       'reportedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+
+    // Recount/sync points for the author to deduct the point
+    if (authorEmail.isNotEmpty) {
+      await incrementUserContributions(authorEmail);
+    }
   }
 
   // 10. Delete Comment
@@ -244,17 +315,21 @@ class FirestoreService {
   }
 
   // 10b. Update Comment
-  Future<void> updateComment(String postId, String commentId, String newText) async {
+  Future<void> updateComment(
+    String postId,
+    String commentId,
+    String newText,
+  ) async {
     await _firestore
         .collection('community_posts')
         .doc(postId)
         .collection('comments')
         .doc(commentId)
         .update({
-      'content': newText,
-      'editedAt': FieldValue.serverTimestamp(),
-      'isEdited': true,
-    });
+          'content': newText,
+          'editedAt': FieldValue.serverTimestamp(),
+          'isEdited': true,
+        });
   }
 
   // 11. Get Announcements Stream
@@ -271,22 +346,26 @@ class FirestoreService {
 
     try {
       final List<Map<String, dynamic>> items = [];
+      final currentYear = DateTime.now().year;
 
       // A. Fetch Posts
       final postSnap = await _firestore
           .collection('community_posts')
           .where('authorEmail', isEqualTo: email)
           .get();
-      
+
       for (var doc in postSnap.docs) {
         final data = doc.data();
         final timestamp = data['timestamp'] as Timestamp?;
+        final date = timestamp?.toDate() ?? DateTime.now();
+        if (date.year != currentYear) continue; // Only current year
+
         items.add({
           'id': doc.id,
           'type': 'Post',
           'title': data['content'] ?? '',
           'subtitle': 'Published in Community Feed',
-          'timestamp': timestamp?.toDate() ?? DateTime.now(),
+          'timestamp': date,
           'status': data['isReported'] == true ? 'reported' : 'active',
         });
       }
@@ -300,13 +379,16 @@ class FirestoreService {
       for (var doc in songSnap.docs) {
         final data = doc.data();
         final timestamp = data['timestamp'] as Timestamp?;
+        final date = timestamp?.toDate() ?? DateTime.now();
+        if (date.year != currentYear) continue; // Only current year
+
         items.add({
           'id': doc.id,
           'type': 'Song Suggestion',
           'title': data['title'] ?? 'Untitled Song',
           'subtitle': 'Suggested under "${data['category'] ?? 'Worship'}"',
           'lyrics': data['lyrics'] ?? '',
-          'timestamp': timestamp?.toDate() ?? DateTime.now(),
+          'timestamp': date,
           'status': data['status'] ?? 'pending',
         });
       }
@@ -320,14 +402,27 @@ class FirestoreService {
       for (var doc in updateSnap.docs) {
         final data = doc.data();
         final timestamp = data['timestamp'] as Timestamp?;
+        final date = timestamp?.toDate() ?? DateTime.now();
+        if (date.year != currentYear) continue; // Only current year
+
         final updateType = data['updateType'] ?? 'Info update';
         final payload = data['payload'] as Map<String, dynamic>? ?? {};
-        
+
         String details = '';
         if (updateType == 'Contact Person') {
-          details = 'Contact Person: ${payload['contactPerson'] ?? 'N/A'}\nContact Number: ${payload['contactNumber'] ?? 'N/A'}';
+          details =
+              'Contact Person: ${payload['contactPerson'] ?? payload['contactName'] ?? 'N/A'}\nContact Number: ${payload['contactNumber'] ?? 'N/A'}';
+        } else if (updateType == 'Facebook Page') {
+          details =
+              'Facebook Page: ${payload['facebookPage'] ?? payload['centerpage'] ?? 'N/A'}';
+        } else if (updateType == 'Center History') {
+          details = 'History: ${payload['historyText'] ?? 'N/A'}';
+        } else if (updateType == 'New Center Suggestion') {
+          details =
+              'Contact: ${payload['contactPerson'] ?? 'N/A'}\nPhone: ${payload['contactNumber'] ?? 'N/A'}\nFacebook: ${payload['facebookPage'] ?? 'N/A'}';
         } else {
-          details = 'Coordinates: ${payload['latitude'] ?? 'N/A'}, ${payload['longitude'] ?? 'N/A'}\nMaps URL: ${payload['mapsUrl'] ?? 'N/A'}';
+          details =
+              'Coordinates: ${payload['latLng'] ?? payload['latitude'] ?? 'N/A'}\nMaps URL: ${payload['mapsLink'] ?? payload['mapsUrl'] ?? 'N/A'}';
         }
 
         items.add({
@@ -336,7 +431,7 @@ class FirestoreService {
           'title': data['centerName'] ?? 'Center Update',
           'subtitle': 'Suggested: $updateType',
           'details': details,
-          'timestamp': timestamp?.toDate() ?? DateTime.now(),
+          'timestamp': date,
           'status': data['status'] ?? 'pending',
         });
       }
@@ -371,7 +466,10 @@ class FirestoreService {
   }
 
   // 16. Get Center Members by Name & Address
-  Future<List<Map<String, dynamic>>> getCenterMembers(String centerName, String centerAddress) async {
+  Future<List<Map<String, dynamic>>> getCenterMembers(
+    String centerName,
+    String centerAddress,
+  ) async {
     if (centerName.isEmpty) return [];
     try {
       final query = await _firestore
@@ -379,7 +477,7 @@ class FirestoreService {
           .where('centerName', isEqualTo: centerName)
           .where('centerAddress', isEqualTo: centerAddress)
           .get();
-      
+
       final List<Map<String, dynamic>> members = [];
       for (var doc in query.docs) {
         members.add(doc.data());
@@ -523,7 +621,51 @@ class FirestoreService {
     });
   }
 
-  // 23. Get All Registered Users (For Admin)
+  // 23. Get All Center Updates (For Admin)
+  Future<List<Map<String, dynamic>>> getAllCenterUpdates() async {
+    try {
+      final query = await _firestore.collection('center_updates').get();
+
+      final List<Map<String, dynamic>> items = [];
+      for (var doc in query.docs) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        items.add(data);
+      }
+
+      // Sort by timestamp descending
+      items.sort((a, b) {
+        final Timestamp? tA = a['timestamp'] as Timestamp?;
+        final Timestamp? tB = b['timestamp'] as Timestamp?;
+        if (tA == null) return 1;
+        if (tB == null) return -1;
+        return tB.compareTo(tA);
+      });
+
+      return items;
+    } catch (e) {
+      debugPrint('Error getting all center updates: $e');
+      return [];
+    }
+  }
+
+  // 24. Respond to Center Update (Admin status update)
+  Future<void> respondToCenterUpdate({
+    required String updateId,
+    required String status,
+    String? adminNotes,
+  }) async {
+    final Map<String, dynamic> data = {
+      'status': status,
+      'reviewedAt': FieldValue.serverTimestamp(),
+    };
+    if (adminNotes != null && adminNotes.isNotEmpty) {
+      data['adminNotes'] = adminNotes;
+    }
+    await _firestore.collection('center_updates').doc(updateId).update(data);
+  }
+
+  // 25. Get All Registered Users (For Admin)
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
       final query = await _firestore.collection('users').get();
@@ -543,5 +685,41 @@ class FirestoreService {
       debugPrint('Error getting all users: $e');
       return [];
     }
+  }
+}
+
+class UserContributionsCache {
+  static final Map<String, int> _cache = {};
+  static final Map<String, bool> _pending = {};
+
+  static int? get(String nickname) => _cache[nickname.toLowerCase()];
+
+  static Future<int> load(String nickname) async {
+    final key = nickname.toLowerCase();
+    if (_cache.containsKey(key)) return _cache[key]!;
+    if (_pending[key] == true) return 0;
+    _pending[key] = true;
+
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('users')
+          .where('name', isEqualTo: nickname)
+          .limit(1)
+          .get();
+      if (query.docs.isNotEmpty) {
+        final val = query.docs.first.data()['contributions'] as int? ?? 0;
+        _cache[key] = val;
+        return val;
+      }
+    } catch (e) {
+      debugPrint('Error loading user contributions count: $e');
+    } finally {
+      _pending[key] = false;
+    }
+    return 0;
+  }
+
+  static void updateCache(String nickname, int val) {
+    _cache[nickname.toLowerCase()] = val;
   }
 }

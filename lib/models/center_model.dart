@@ -7,6 +7,7 @@ class CenterModel {
   final String contact;
   final String status;
   final String history;
+  final String page;
 
   const CenterModel({
     required this.name,
@@ -17,6 +18,7 @@ class CenterModel {
     required this.contact,
     required this.status,
     this.history = '',
+    this.page = '',
   });
 
   factory CenterModel.fromMap(Map<String, dynamic> map) {
@@ -29,6 +31,7 @@ class CenterModel {
       contact: map['centercontact']?.toString().trim() ?? '',
       status: map['centerstatus']?.toString().trim() ?? '',
       history: (map['centerhistory'] ?? map['history'])?.toString().trim() ?? '',
+      page: (map['centerpage'] ?? map['page'] ?? map['facebookpage'])?.toString().trim() ?? '',
     );
   }
 
@@ -42,6 +45,7 @@ class CenterModel {
       'centercontact': contact,
       'centerstatus': status,
       'centerhistory': history,
+      'centerpage': page,
     };
   }
 }

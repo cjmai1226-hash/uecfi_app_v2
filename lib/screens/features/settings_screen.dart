@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/prayer_language_service.dart';
-import '../../services/chords_settings_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/user_service.dart';
@@ -465,13 +464,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
 
     Widget buildSectionHeader(String title) {
-      return Padding(
-        padding: const EdgeInsets.only(left: 8, top: 20, bottom: 8),
-        child: Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.textTheme.bodySmall?.color,
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 8, top: 16, bottom: 8),
+          child: Text(
+            title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.textTheme.bodySmall?.color,
+            ),
           ),
         ),
       );
@@ -486,12 +488,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }) {
       return ListTile(
         onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         leading: Icon(
           icon,
-          size: 24,
-          color: theme.brightness == Brightness.dark ? Colors.white70 : Colors.black87,
+          size: 22,
+          color: theme.brightness == Brightness.dark
+              ? Colors.white70
+              : Colors.black87,
         ),
         title: Text(
           title,
@@ -513,141 +515,181 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             buildSectionHeader('Preferences'),
-            
-            // Prayer Language Selector row
-            ValueListenableBuilder<String>(
-              valueListenable: PrayerLanguageService.instance,
-              builder: (context, langCode, child) {
-                return buildSettingsRow(
-                  icon: Icons.translate_rounded,
-                  title: 'Prayer Language',
-                  subtitle: Text(
-                    langCode == 'TAG' ? 'Tagalog (TAG)' : 'Ilocano (ILO)',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-                  onTap: _showLanguageBottomSheet,
-                );
-              },
-            ),
-
-            // App Notifications Switch row
-            ValueListenableBuilder<bool>(
-              valueListenable: NotificationsSettingsService.instance,
-              builder: (context, enabled, child) {
-                return buildSettingsRow(
-                  icon: Icons.notifications_rounded,
-                  title: 'App Notifications',
-                  subtitle: Text(
-                    enabled ? 'Enabled' : 'Disabled',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  trailing: Switch(
-                    value: enabled,
-                    onChanged: (val) {
-                      NotificationsSettingsService.instance.setNotificationsEnabled(val);
+            Card(
+              color: theme.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.dividerColor),
+              ),
+              child: Column(
+                children: [
+                  // Prayer Language Selector row
+                  ValueListenableBuilder<String>(
+                    valueListenable: PrayerLanguageService.instance,
+                    builder: (context, langCode, child) {
+                      return buildSettingsRow(
+                        icon: Icons.translate_rounded,
+                        title: 'Prayer Language',
+                        subtitle: Text(
+                          langCode == 'TAG' ? 'Tagalog (TAG)' : 'Ilocano (ILO)',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: theme.hintColor,
+                        ),
+                        onTap: _showLanguageBottomSheet,
+                      );
                     },
                   ),
-                );
-              },
-            ),
+                  Divider(color: theme.dividerColor, height: 1),
 
-            // Show Chords and Shapes Switch row
-            ValueListenableBuilder<bool>(
-              valueListenable: ChordsSettingsService.instance,
-              builder: (context, showChordsAndShapes, child) {
-                return buildSettingsRow(
-                  icon: Icons.queue_music_rounded,
-                  title: 'Show Chords & Shapes',
-                  subtitle: Text(
-                    showChordsAndShapes ? 'Enabled' : 'Disabled',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  trailing: Switch(
-                    value: showChordsAndShapes,
-                    onChanged: (val) {
-                      ChordsSettingsService.instance.setShowChordsAndShapes(val);
+                  // App Notifications Switch row
+                  ValueListenableBuilder<bool>(
+                    valueListenable: NotificationsSettingsService.instance,
+                    builder: (context, enabled, child) {
+                      return buildSettingsRow(
+                        icon: Icons.notifications_rounded,
+                        title: 'App Notifications',
+                        subtitle: Text(
+                          enabled ? 'Enabled' : 'Disabled',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        trailing: Switch(
+                          value: enabled,
+                          onChanged: (val) {
+                            NotificationsSettingsService.instance
+                                .setNotificationsEnabled(val);
+                          },
+                        ),
+                      );
                     },
                   ),
-                );
-              },
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             buildSectionHeader('Appearance'),
-
-            // Theme Mode selector row (Opens Bottom Sheet)
-            buildSettingsRow(
-              icon: Icons.dark_mode_rounded,
-              title: 'Appearance',
-              subtitle: Text(
-                _selectedThemeMode[0].toUpperCase() + _selectedThemeMode.substring(1),
-                style: const TextStyle(fontSize: 13),
+            Card(
+              color: theme.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.dividerColor),
               ),
-              trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-              onTap: _showAppearanceBottomSheet,
+              child: Column(
+                children: [
+                  buildSettingsRow(
+                    icon: Icons.dark_mode_rounded,
+                    title: 'Appearance',
+                    subtitle: Text(
+                      _selectedThemeMode[0].toUpperCase() +
+                          _selectedThemeMode.substring(1),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.hintColor,
+                    ),
+                    onTap: _showAppearanceBottomSheet,
+                  ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             buildSectionHeader('Account'),
-
-            buildSettingsRow(
-              icon: Icons.cloud_download_rounded,
-              title: 'Recover Profile',
-              subtitle: const Text(
-                'Restore your profile details from the cloud',
-                style: TextStyle(fontSize: 12),
+            Card(
+              color: theme.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.dividerColor),
               ),
-              trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-              onTap: _showRecoverProfileDialog,
+              child: Column(
+                children: [
+                  buildSettingsRow(
+                    icon: Icons.cloud_download_rounded,
+                    title: 'Recover Profile',
+                    subtitle: const Text(
+                      'Restore your profile details from the cloud',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.hintColor,
+                    ),
+                    onTap: _showRecoverProfileDialog,
+                  ),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
             buildSectionHeader('Legal & About'),
-
-            buildSettingsRow(
-              icon: Icons.description_outlined,
-              title: 'Terms of Service',
-              trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-              onTap: () => _showFeatureDialog(
-                'Terms of Service',
-                'Welcome to UECFI APP. By using this application, you agree to comply with and be bound by our terms of service, ensuring respectful communication and appropriate content sharing.',
+            Card(
+              color: theme.cardColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: theme.dividerColor),
               ),
-            ),
-
-            buildSettingsRow(
-              icon: Icons.privacy_tip_outlined,
-              title: 'Privacy Policy',
-              trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-              onTap: () => _showFeatureDialog(
-                'Privacy Policy',
-                'Your privacy is important to us. UECFI APP secures your profile information and local storage details. We do not sell or distribute user data to third parties.',
-              ),
-            ),
-
-            buildSettingsRow(
-              icon: Icons.group_outlined,
-              title: 'Community Standards',
-              trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-              onTap: () => _showFeatureDialog(
-                'Community Standards',
-                'UECFI APP is built on love, faith, and fellowship. We expect all community members to post supportive material, refrain from hate speech, and follow church guiding principles.',
-              ),
-            ),
-
-            buildSettingsRow(
-              icon: Icons.info_outline_rounded,
-              title: 'About',
-              trailing: Icon(Icons.chevron_right_rounded, color: theme.hintColor),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AboutScreen(),
+              child: Column(
+                children: [
+                  buildSettingsRow(
+                    icon: Icons.description_outlined,
+                    title: 'Terms of Service',
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.hintColor,
+                    ),
+                    onTap: () => _showFeatureDialog(
+                      'Terms of Service',
+                      'Welcome to UECFI APP. By using this application, you agree to comply with and be bound by our terms of service, ensuring respectful communication and appropriate content sharing.',
+                    ),
                   ),
-                );
-              },
+                  Divider(color: theme.dividerColor, height: 1),
+                  buildSettingsRow(
+                    icon: Icons.privacy_tip_outlined,
+                    title: 'Privacy Policy',
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.hintColor,
+                    ),
+                    onTap: () => _showFeatureDialog(
+                      'Privacy Policy',
+                      'Your privacy is important to us. UECFI APP secures your profile information and local storage details. We do not sell or distribute user data to third parties.',
+                    ),
+                  ),
+                  Divider(color: theme.dividerColor, height: 1),
+                  buildSettingsRow(
+                    icon: Icons.group_outlined,
+                    title: 'Community Standards',
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.hintColor,
+                    ),
+                    onTap: () => _showFeatureDialog(
+                      'Community Standards',
+                      'UECFI APP is built on love, faith, and fellowship. We expect all community members to post supportive material, refrain from hate speech, and follow church guiding principles.',
+                    ),
+                  ),
+                  Divider(color: theme.dividerColor, height: 1),
+                  buildSettingsRow(
+                    icon: Icons.info_outline_rounded,
+                    title: 'About',
+                    trailing: Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.hintColor,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const AboutScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 40),

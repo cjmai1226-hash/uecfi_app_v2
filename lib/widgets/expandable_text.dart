@@ -22,16 +22,17 @@ class _ExpandableTextState extends State<ExpandableText> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final text = widget.text;
+    final textChars = widget.text.characters;
 
-    if (text.length <= widget.maxLength) {
+    if (textChars.length <= widget.maxLength) {
       return Text(
-        text,
+        widget.text,
         style: widget.style,
       );
     }
 
-    final displayedText = _isExpanded ? text : '${text.substring(0, widget.maxLength)}...';
+    final truncated = textChars.take(widget.maxLength).toString().trimRight();
+    final displayedText = _isExpanded ? widget.text : '$truncated...';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

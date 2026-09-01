@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'onboarding_screen.dart';
 import 'main_navigation_screen.dart';
 import '../../services/user_service.dart';
+import '../../services/ad_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,6 +41,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     );
 
     _animationController.forward();
+    if (AdService().isSupportedPlatform) {
+      AdService().loadAndShowAppOpenAd();
+    }
 
     _navigationTimer = Timer(const Duration(milliseconds: 2500), () async {
       if (mounted) {
@@ -74,7 +78,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
-    final secondaryColor = theme.colorScheme.secondary;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -92,28 +95,21 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'UECFI ',
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2.5,
-                              color: primaryColor,
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'APP',
-                            style: TextStyle(
-                              fontSize: 34,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2.5,
-                              color: secondaryColor,
-                            ),
-                          ),
-                        ],
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                          width: 2.5,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(18),
+                      child: Image.asset(
+                        'assets/images/brand_mark.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 14),

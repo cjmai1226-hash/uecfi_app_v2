@@ -5,6 +5,7 @@ import 'screens/main/splash_screen.dart';
 import 'services/theme_service.dart';
 import 'services/notification_service.dart';
 import 'services/notifications_settings_service.dart';
+import 'services/ad_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +21,8 @@ void main() async {
 
   // Initialize notification service
   await NotificationService().init();
+  // Initialize mobile ads
+  await AdService().initializeMobileAds();
   // Load settings preference and schedule notifications accordingly
   final _ = NotificationsSettingsService.instance;
 

@@ -3,8 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 import '../../models/user_profile.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/feed_composer_card.dart';
 import '../../widgets/expandable_text.dart';
 import '../features/create_post_screen.dart';
+import '../../widgets/contributor_badge.dart';
+import '../../models/post_gradient.dart';
 
 class BlogPost {
   final dynamic id;
@@ -18,6 +21,7 @@ class BlogPost {
   bool isLiked;
   bool showComments;
   final List<PostComment> comments;
+  String? bgGradient;
 
   BlogPost({
     required this.id,
@@ -31,6 +35,7 @@ class BlogPost {
     this.isLiked = false,
     this.showComments = false,
     required this.comments,
+    this.bgGradient,
   });
 }
 
@@ -77,6 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+
   Future<void> _fetchPosts() async {
     if (_posts.isEmpty) {
       setState(() {
@@ -111,6 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           commentsCount: data['comments'] as int? ?? 0,
           isLiked: likedBy.contains(currentUserUid),
           comments: [],
+          bgGradient: data['bgGradient'] as String?,
         );
       }).toList();
 
@@ -604,12 +611,34 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    comment.author,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        comment.author,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (comment.author.toLowerCase() == 'devchristian') ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.verified_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 13,
+                        ),
+                      ],
+                      const SizedBox(width: 4),
+                      FutureBuilder<int>(
+                        future: UserContributionsCache.load(comment.author),
+                        initialData: UserContributionsCache.get(comment.author) ?? 0,
+                        builder: (context, snapshot) {
+                          final count = snapshot.data ?? 0;
+                          return getContributorBadge(count, theme, size: 13);
+                        },
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -674,9 +703,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 ListTile(
                   leading: const Icon(Icons.edit_outlined),
                   title: const Text('Edit Post', style: TextStyle(fontWeight: FontWeight.bold)),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(context).pop();
-                    _showEditPostDialog(context, post);
+                    final updatedContent = await Navigator.of(context).push<String>(
+                      MaterialPageRoute(
+                        builder: (context) => CreatePostScreen(postToEdit: post),
+                      ),
+                    );
+                    if (updatedContent != null) {
+                      setState(() {
+                        post.content = updatedContent;
+                      });
+                    }
                   },
                 ),
               ListTile(
@@ -695,64 +733,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showEditPostDialog(BuildContext context, BlogPost post) {
-    final editController = TextEditingController(text: post.content);
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Post'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: TextField(
-              controller: editController,
-              decoration: const InputDecoration(
-                hintText: 'What is on your mind?',
-              ),
-              maxLines: 5,
-              autofocus: true,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final newContent = editController.text.trim();
-                if (newContent.isNotEmpty) {
-                  if (post.id is String) {
-                    try {
-                      await FirestoreService().updateCommunityPost(
-                        postId: post.id.toString(),
-                        newContent: newContent,
-                        previousContent: post.content,
-                      );
-                      setState(() {
-                        post.content = newContent;
-                      });
-                    } catch (e) {
-                      debugPrint('Error updating post in Firestore: $e');
-                    }
-                  } else {
-                    setState(() {
-                      post.content = newContent;
-                    });
-                  }
-                }
-                if (context.mounted) {
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   void _showReportConfirmationDialog(BuildContext context, BlogPost post) {
     showDialog(
@@ -812,24 +793,38 @@ class _HomeScreenState extends State<HomeScreen> {
       body: ValueListenableBuilder<UserProfile>(
         valueListenable: UserService.instance,
         builder: (context, profile, child) {
-          final userNickname = profile.nickname.isNotEmpty ? profile.nickname : 'Member';
-
           return RefreshIndicator(
             onRefresh: _fetchPosts,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.only(top: 8, bottom: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Post Composer Card (Edge-to-Edge)
+                  FeedComposerCard(
+                    placeholderTemplate: "What's on your mind, {name}?",
+                    icon: Icons.send_rounded,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreatePostScreen(),
+                        ),
+                      ).then((_) => _fetchPosts());
+                    },
+                  ),
+
                   // Community Feed Header
-                  Text(
-                    'Community Feed',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                    child: Text(
+                      'Community Feed',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
 
                   if (_isLoadingPosts)
                     const Padding(
@@ -840,7 +835,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     )
                   else if (_postsError != null)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 24,
+                        horizontal: 16,
+                      ),
                       child: Center(
                         child: Text(
                           'Error loading posts. Pull down to try again.',
@@ -849,77 +847,85 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     )
                   else if (_posts.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-                      margin: const EdgeInsets.only(top: 12),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: theme.dividerColor,
-                          width: 1,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 32,
+                          horizontal: 24,
                         ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.feed_outlined,
-                              size: 48,
-                              color: theme.colorScheme.primary,
-                            ),
+                        margin: const EdgeInsets.only(top: 12),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: theme.dividerColor,
+                            width: 1,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Nothing to see here right now',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.feed_outlined,
+                                size: 48,
+                                color: theme.colorScheme.primary,
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Be the first to share something with the community!',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.textTheme.bodySmall?.color,
+                            const SizedBox(height: 16),
+                            Text(
+                              'Nothing to see here right now',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: FilledButton.icon(
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const CreatePostScreen(),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Be the first to share something with the community!',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.textTheme.bodySmall?.color,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const CreatePostScreen(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.edit_note_rounded),
+                                label: const Text(
+                                  'Create a post now',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                );
-                              },
-                              icon: const Icon(Icons.edit_note_rounded),
-                              label: const Text(
-                                'Create a post now',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
                                 ),
-                              ),
-                              style: FilledButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                style: FilledButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     )
                   else
@@ -931,13 +937,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         final post = _posts[index];
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
                             color: theme.cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.dividerColor,
-                              width: 1,
+                            border: Border(
+                              top: BorderSide(
+                                color: theme.dividerColor
+                                    .withValues(alpha: 0.6),
+                                width: 1,
+                              ),
+                              bottom: BorderSide(
+                                color: theme.dividerColor
+                                    .withValues(alpha: 0.8),
+                                width: 1,
+                              ),
                             ),
                           ),
                           child: Column(
@@ -945,11 +959,16 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               // Post Header (Avatar, Author, Position, Time, Options)
                               ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 leading: CircleAvatar(
                                   radius: 20,
-                                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-                                  child: post.author.toLowerCase() == 'devchristian'
+                                  backgroundColor: theme.colorScheme.primary
+                                      .withValues(alpha: 0.1),
+                                  child: post.author.toLowerCase() ==
+                                          'devchristian'
                                       ? Padding(
                                           padding: const EdgeInsets.all(3.0),
                                           child: ClipOval(
@@ -968,16 +987,74 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                         ),
                                 ),
-                                title: Text(
-                                  post.author,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      post.author,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    if (post.author.toLowerCase() ==
+                                        'devchristian') ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        Icons.verified_rounded,
+                                        color: theme.colorScheme.primary,
+                                        size: 16,
+                                      ),
+                                    ],
+                                    const SizedBox(width: 4),
+                                    FutureBuilder<int>(
+                                      future: UserContributionsCache.load(
+                                        post.author,
+                                      ),
+                                      initialData:
+                                          UserContributionsCache.get(
+                                                post.author,
+                                              ) ??
+                                              0,
+                                      builder: (context, snapshot) {
+                                        final count = snapshot.data ?? 0;
+                                        return getContributorBadge(
+                                          count,
+                                          theme,
+                                          size: 16,
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                subtitle: Text(
-                                  post.timeAgo,
-                                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                                subtitle: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      post.timeAgo,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 4,
+                                      ),
+                                      child: Text(
+                                        '•',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.public_rounded,
+                                      size: 12,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                  ],
                                 ),
                                 trailing: IconButton(
                                   icon: Icon(
@@ -985,22 +1062,70 @@ class _HomeScreenState extends State<HomeScreen> {
                                     color: theme.textTheme.bodySmall?.color,
                                   ),
                                   tooltip: 'Post options',
-                                  onPressed: () => _showPostOptions(context, post),
+                                  onPressed: () =>
+                                      _showPostOptions(context, post),
                                 ),
                               ),
 
-                              // Post Content
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                child: ExpandableText(
-                                  text: post.content,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
+                              // Post Content (Edge-to-edge if short gradient, padded if standard/long)
+                              Builder(
+                                builder: (context) {
+                                  final postGradient =
+                                      PostGradientPreset.findById(
+                                    post.bgGradient,
+                                  );
+                                  final isLongPost =
+                                      post.content.characters.length > 180 ||
+                                      post.content.split('\n').length > 4;
+
+                                  if (postGradient != null && !isLongPost) {
+                                    return Container(
+                                      width: double.infinity,
+                                      constraints:
+                                          const BoxConstraints(minHeight: 180),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 36,
+                                      ),
+                                      margin: const EdgeInsets.only(
+                                        top: 2,
+                                        bottom: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: postGradient.gradient,
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        post.content,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.45,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 4,
+                                    ),
+                                    child: ExpandableText(
+                                      text: post.content,
+                                      style: theme.textTheme.bodyMedium,
+                                    ),
+                                  );
+                                },
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 4),
 
                               Padding(
-                                padding: const EdgeInsets.only(left: 16, bottom: 12),
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  bottom: 12,
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
@@ -1009,49 +1134,81 @@ class _HomeScreenState extends State<HomeScreen> {
                                       onTap: () => _handleLike(post),
                                       borderRadius: BorderRadius.circular(20),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 6,
+                                        ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(
-                                              post.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                                              post.isLiked
+                                                  ? Icons.favorite_rounded
+                                                  : Icons
+                                                      .favorite_border_rounded,
                                               size: 16,
-                                              color: post.isLiked ? Colors.redAccent : theme.textTheme.bodySmall?.color,
+                                              color: post.isLiked
+                                                  ? Colors.red
+                                                  : theme
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.color,
                                             ),
-                                            const SizedBox(width: 6),
+                                            const SizedBox(width: 4),
                                             Text(
                                               '${post.likesCount}',
                                               style: TextStyle(
                                                 fontSize: 12,
-                                                fontWeight: post.isLiked ? FontWeight.bold : FontWeight.normal,
-                                                color: post.isLiked ? Colors.redAccent : theme.textTheme.bodySmall?.color,
+                                                fontWeight: post.isLiked
+                                                    ? FontWeight.bold
+                                                    : FontWeight.normal,
+                                                color: post.isLiked
+                                                    ? Colors.red
+                                                    : theme
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.color,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 16),
+                                    const SizedBox(width: 12),
+
                                     // Comment icon + count
                                     InkWell(
-                                      onTap: () => _showCommentsBottomSheet(context, post, userNickname),
+                                      onTap: () => _showCommentsBottomSheet(
+                                        context,
+                                        post,
+                                        profile.nickname,
+                                      ),
                                       borderRadius: BorderRadius.circular(20),
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 6,
+                                        ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(
                                               Icons.mode_comment_outlined,
                                               size: 16,
-                                              color: theme.textTheme.bodySmall?.color,
+                                              color: theme
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color,
                                             ),
                                             const SizedBox(width: 6),
                                             Text(
                                               '${post.id is String ? post.commentsCount : post.comments.length}',
                                               style: TextStyle(
                                                 fontSize: 12,
-                                                color: theme.textTheme.bodySmall?.color,
+                                                color: theme
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.color,
                                               ),
                                             ),
                                           ],

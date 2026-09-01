@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/database_helper.dart';
 import '../../models/bylaw_model.dart';
 import '../details/bylaw_detail_screen.dart';
+import '../../services/ad_service.dart';
 
 class BylawsScreen extends StatefulWidget {
   const BylawsScreen({super.key});
@@ -47,6 +48,7 @@ class _BylawsScreenState extends State<BylawsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      bottomNavigationBar: const AdBannerWidget(),
       appBar: AppBar(
         title: const Text('Church Bylaws'),
         elevation: 0,

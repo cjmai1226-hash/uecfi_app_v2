@@ -109,7 +109,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8), // Polished Facebook-style corners
+            borderRadius: BorderRadius.circular(28),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -125,11 +125,27 @@ class AppTheme {
           side: const BorderSide(color: primary, width: 1.5),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(28),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
       ),
@@ -194,7 +210,7 @@ class AppTheme {
       ),
 
       appBarTheme: const AppBarTheme(
-        backgroundColor: darkCard,
+        backgroundColor: darkBackground,
         foregroundColor: darkText,
         elevation: 0,
         centerTitle: true,
@@ -260,7 +276,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(28),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
@@ -276,11 +292,27 @@ class AppTheme {
           side: const BorderSide(color: darkPrimary, width: 1.5),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(28),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: darkPrimary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
           ),
         ),
       ),

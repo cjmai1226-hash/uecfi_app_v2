@@ -9,6 +9,7 @@ import '../../models/user_profile.dart';
 import '../../models/center_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/expandable_text.dart';
+import '../../widgets/contributor_badge.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool showAppBar;
@@ -35,6 +36,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       final items = await FirestoreService().getUserContributions(email);
+
+      // Self-healing check: Sync total contribution count if it differs from the document tracker
+      final currentProfile = UserService.instance.value;
+      final validCount = items.where((item) => item['status'] != 'reported').length;
+      if (currentProfile.contributions != validCount) {
+        await FirestoreService().syncUserContributionsCount(
+          email,
+          validCount,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _contributions = items;
@@ -52,7 +64,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _openEditProfilePage(BuildContext context, UserProfile currentProfile) async {
+  void _openEditProfilePage(
+    BuildContext context,
+    UserProfile currentProfile,
+  ) async {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => EditProfileScreen(currentProfile: currentProfile),
@@ -62,7 +77,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String _formatDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
@@ -84,9 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
-                style: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color,
-                ),
+                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
               ),
             ),
             FilledButton(
@@ -94,9 +120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.of(context).pop();
                 await _deleteContribution(type, id);
               },
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
               child: const Text('Delete'),
             ),
           ],
@@ -105,7 +129,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showContributionOptions(BuildContext context, Map<String, dynamic> item) {
+  void _showContributionOptions(
+    BuildContext context,
+    Map<String, dynamic> item,
+  ) {
     final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
@@ -160,7 +187,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
             ),
             SizedBox(width: 12),
             Text('Deleting contribution...'),
@@ -362,9 +392,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ? profile.nickname
               : 'Member';
           final district = profile.district.isNotEmpty
-              ? profile.district
-              : 'District';
-          final area = profile.area.isNotEmpty ? profile.area : 'Area';
+              ? (profile.district.startsWith('District')
+                  ? profile.district
+                  : 'District ${profile.district}')
+              : '';
+          final area = profile.area.isNotEmpty
+              ? (profile.area.startsWith('Area')
+                  ? profile.area
+                  : 'Area ${profile.area}')
+              : '';
           final localCenter = profile.localCenter.isNotEmpty
               ? profile.localCenter
               : 'Local Center';
@@ -464,77 +500,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // Overlapping Profile Avatar
                     Positioned(
                       bottom: -40,
-                      left: 20,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: theme.scaffoldBackgroundColor,
-                            width: 4,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.scaffoldBackgroundColor,
+                              width: 4,
                             ),
-                          ],
-                        ),
-                        child: GestureDetector(
-                          onTap: () => _handlePhotoTap(true, profile),
-                          child: Stack(
-                            children: [
-                              Hero(
-                                tag: 'avatar_hero',
-                                child: CircleAvatar(
-                                  radius: 46,
-                                  backgroundColor: isDark
-                                      ? const Color(0xFF3A3B3C)
-                                      : const Color(0xFFE4E6EB),
-                                  backgroundImage:
-                                      nickname.toLowerCase() !=
-                                              'devchristian' &&
-                                          profile.avatarPath.isNotEmpty
-                                      ? FileImage(File(profile.avatarPath))
-                                      : null,
-                                  child:
-                                      nickname.toLowerCase() == 'devchristian'
-                                      ? Padding(
-                                          padding: const EdgeInsets.all(6.0),
-                                          child: ClipOval(
-                                            child: Image.asset(
-                                              'assets/images/brand_mark.png',
-                                              fit: BoxFit.contain,
-                                            ),
-                                          ),
-                                        )
-                                      : (profile.avatarPath.isEmpty
-                                            ? Text(
-                                                initial,
-                                                style: TextStyle(
-                                                  fontSize: 36,
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                ),
-                                              )
-                                            : null),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: CircleAvatar(
-                                  radius: 13,
-                                  backgroundColor: theme.colorScheme.primary,
-                                  child: const Icon(
-                                    Icons.camera_alt_rounded,
-                                    size: 13,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
+                          ),
+                          child: GestureDetector(
+                            onTap: () => _handlePhotoTap(true, profile),
+                            child: Stack(
+                              children: [
+                                Hero(
+                                  tag: 'avatar_hero',
+                                  child: CircleAvatar(
+                                    radius: 46,
+                                    backgroundColor: isDark
+                                        ? const Color(0xFF3A3B3C)
+                                        : const Color(0xFFE4E6EB),
+                                    backgroundImage:
+                                        nickname.toLowerCase() !=
+                                                'devchristian' &&
+                                            profile.avatarPath.isNotEmpty
+                                        ? FileImage(File(profile.avatarPath))
+                                        : null,
+                                    child:
+                                        nickname.toLowerCase() == 'devchristian'
+                                        ? Padding(
+                                            padding: const EdgeInsets.all(6.0),
+                                            child: ClipOval(
+                                              child: Image.asset(
+                                                'assets/images/brand_mark.png',
+                                                fit: BoxFit.contain,
+                                              ),
+                                            ),
+                                          )
+                                        : (profile.avatarPath.isEmpty
+                                              ? Text(
+                                                  initial,
+                                                  style: TextStyle(
+                                                    fontSize: 36,
+                                                    fontWeight: FontWeight.bold,
+                                                    color:
+                                                        theme.colorScheme.primary,
+                                                  ),
+                                                )
+                                              : null),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: CircleAvatar(
+                                    radius: 13,
+                                    backgroundColor: theme.colorScheme.primary,
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -548,49 +587,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              nickname,
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                      // Centered Nickname and badges
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                nickname,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Free badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.brightness == Brightness.dark
-                                  ? const Color(0xFF3A3B3C)
-                                  : const Color(0xFFE4E6EB),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Free',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: theme.textTheme.bodyMedium?.color,
+                            if (nickname.toLowerCase() ==
+                                'devchristian') ...[
+                              const SizedBox(width: 6),
+                              Icon(
+                                Icons.verified_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 20,
                               ),
+                            ],
+                            const SizedBox(width: 6),
+                            getContributorBadge(
+                              profile.contributions,
+                              theme,
+                              size: 20,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'UECFI Member App User',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.textTheme.bodySmall?.color,
+                          ],
                         ),
                       ),
+                      if (district.isNotEmpty ||
+                          area.isNotEmpty ||
+                          profile.position.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Center(
+                          child: Text(
+                            [
+                              if (district.isNotEmpty) district,
+                              if (area.isNotEmpty) area,
+                              if (profile.position.isNotEmpty) profile.position,
+                            ].join(' • '),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.textTheme.bodySmall?.color,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 20),
 
                       // Facebook-style wide "Edit Profile" Action Button
@@ -624,7 +676,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
-                      // Facebook-style "Intro" Details section
+                      // Standard Grouped Card "Intro" Details section
                       Text(
                         'Intro',
                         style: theme.textTheme.titleMedium?.copyWith(
@@ -632,63 +684,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _buildFacebookIntroRow(
-                        theme: theme,
-                        icon: Icons.person_rounded,
-                        prefixText: 'Full Name: ',
-                        boldText:
-                            '${profile.firstName} ${profile.middleName.isEmpty ? "" : "${profile.middleName} "}${profile.lastName}',
+                      Card(
+                        color: theme.cardColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: theme.dividerColor),
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: const Icon(Icons.person_rounded),
+                              title: Text(
+                                '${profile.firstName} ${profile.middleName.isEmpty ? "" : "${profile.middleName} "}${profile.lastName}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Full Name',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                            if (profile.memberId.isNotEmpty) ...[
+                              Divider(color: theme.dividerColor, height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.badge_outlined),
+                                title: Text(
+                                  profile.memberId,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Member ID',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                            if (profile.email.isNotEmpty) ...[
+                              Divider(color: theme.dividerColor, height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.email_outlined),
+                                title: Text(
+                                  profile.email,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Email',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                            Divider(color: theme.dividerColor, height: 1),
+                            ListTile(
+                              leading: const Icon(Icons.church_rounded),
+                              title: Text(
+                                localCenter,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Local Center',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                            if (centerAddress.isNotEmpty) ...[
+                              Divider(color: theme.dividerColor, height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.place_rounded),
+                                title: Text(
+                                  centerAddress,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Worships at',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 14),
-                      if (profile.memberId.isNotEmpty) ...[
-                        _buildFacebookIntroRow(
-                          theme: theme,
-                          icon: Icons.badge_outlined,
-                          prefixText: 'Member ID: ',
-                          boldText: profile.memberId,
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      if (profile.email.isNotEmpty) ...[
-                        _buildFacebookIntroRow(
-                          theme: theme,
-                          icon: Icons.email_outlined,
-                          prefixText: 'Email: ',
-                          boldText: profile.email,
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      if (profile.position.isNotEmpty) ...[
-                        _buildFacebookIntroRow(
-                          theme: theme,
-                          icon: Icons.work_outline_rounded,
-                          prefixText: 'Serves as ',
-                          boldText: profile.position,
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                      _buildFacebookIntroRow(
-                        theme: theme,
-                        icon: Icons.church_rounded,
-                        prefixText: 'Local Center: ',
-                        boldText: localCenter,
-                      ),
-                      const SizedBox(height: 14),
-                      _buildFacebookIntroRow(
-                        theme: theme,
-                        icon: Icons.map_rounded,
-                        prefixText: 'Member of ',
-                        boldText: 'District $district • Area $area',
-                      ),
-                      if (centerAddress.isNotEmpty) ...[
-                        const SizedBox(height: 14),
-                        _buildFacebookIntroRow(
-                          theme: theme,
-                          icon: Icons.place_rounded,
-                          prefixText: 'Worships at ',
-                                  boldText: centerAddress,
-                        ),
-                      ],
                       const SizedBox(height: 24),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
@@ -702,11 +788,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          if (!_isLoadingContributions && _contributions.isNotEmpty)
+                          if (!_isLoadingContributions &&
+                              _contributions.isNotEmpty)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -725,9 +817,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (_isLoadingContributions)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 32),
-                          child: Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          child: Center(child: CircularProgressIndicator()),
                         )
                       else if (_contributions.isEmpty)
                         Container(
@@ -780,7 +870,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             final DateTime timestamp =
                                 item['timestamp'] as DateTime;
                             final String status = item['status'] ?? '';
-                            final bool isExpiredPost = type == 'Post' && DateTime.now().difference(timestamp).inDays >= 5;
+                            final bool isExpiredPost =
+                                type == 'Post' &&
+                                DateTime.now().difference(timestamp).inDays >=
+                                    5;
 
                             // Header initials helper
                             final initials = initial;
@@ -819,7 +912,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       fontSize: 12,
                                     ),
                                   ),
-                                  if (item['lyrics'] != null && (item['lyrics'] as String).isNotEmpty) ...[
+                                  if (item['lyrics'] != null &&
+                                      (item['lyrics'] as String)
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 12),
                                     Container(
                                       width: double.infinity,
@@ -835,7 +930,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         style: TextStyle(
                                           fontFamily: 'monospace',
                                           fontSize: 12,
-                                          color: theme.textTheme.bodyMedium?.color,
+                                          color:
+                                              theme.textTheme.bodyMedium?.color,
                                         ),
                                         maxLines: 4,
                                         overflow: TextOverflow.ellipsis,
@@ -871,7 +967,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       fontSize: 12,
                                     ),
                                   ),
-                                  if (item['details'] != null && (item['details'] as String).isNotEmpty) ...[
+                                  if (item['details'] != null &&
+                                      (item['details'] as String)
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 12),
                                     Container(
                                       width: double.infinity,
@@ -884,10 +982,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       ),
                                       child: Text(
                                         item['details'] as String,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          fontSize: 12,
-                                          height: 1.4,
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontSize: 12,
+                                              height: 1.4,
+                                            ),
                                       ),
                                     ),
                                   ],
@@ -910,20 +1009,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 children: [
                                   ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     leading: CircleAvatar(
                                       radius: 20,
                                       backgroundColor: theme.colorScheme.primary
                                           .withValues(alpha: 0.1),
-                                      backgroundImage: nickname.toLowerCase() !=
+                                      backgroundImage:
+                                          nickname.toLowerCase() !=
                                                   'devchristian' &&
                                               profile.avatarPath.isNotEmpty
                                           ? FileImage(File(profile.avatarPath))
                                           : null,
-                                      child: nickname.toLowerCase() ==
+                                      child:
+                                          nickname.toLowerCase() ==
                                               'devchristian'
                                           ? Padding(
-                                              padding: const EdgeInsets.all(3.0),
+                                              padding: const EdgeInsets.all(
+                                                3.0,
+                                              ),
                                               child: ClipOval(
                                                 child: Image.asset(
                                                   'assets/images/brand_mark.png',
@@ -932,16 +1037,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               ),
                                             )
                                           : (profile.avatarPath.isEmpty
-                                              ? Text(
-                                                  initials,
-                                                  style: TextStyle(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: theme
-                                                        .colorScheme.primary,
-                                                  ),
-                                                )
-                                              : null),
+                                                ? Text(
+                                                    initials,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .primary,
+                                                    ),
+                                                  )
+                                                : null),
                                     ),
                                     title: Text(
                                       nickname,
@@ -955,15 +1062,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       child: Wrap(
                                         spacing: 6,
                                         runSpacing: 2,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
                                         children: [
                                           Text(
                                             type,
                                             style: theme.textTheme.bodySmall
                                                 ?.copyWith(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                           ),
                                           Text(
                                             '•',
@@ -985,21 +1093,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                               isExpiredPost
                                                   ? 'Expired'
                                                   : (status == 'pending'
-                                                      ? 'Pending'
-                                                      : (status == 'reported'
-                                                          ? 'Reported'
-                                                          : 'Active')),
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
+                                                        ? 'Pending'
+                                                        : (status == 'reported'
+                                                              ? 'Reported'
+                                                              : 'Active')),
+                                              style: theme.textTheme.bodySmall?.copyWith(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                                 color: isExpiredPost
                                                     ? Colors.grey.shade600
                                                     : (status == 'pending'
-                                                        ? Colors.orange.shade800
-                                                        : (status == 'reported'
-                                                            ? Colors.red.shade800
-                                                            : Colors.green.shade800)),
+                                                          ? Colors
+                                                                .orange
+                                                                .shade800
+                                                          : (status ==
+                                                                    'reported'
+                                                                ? Colors
+                                                                      .red
+                                                                      .shade800
+                                                                : Colors
+                                                                      .green
+                                                                      .shade800)),
                                               ),
                                             ),
                                           ],
@@ -1012,13 +1126,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: theme.textTheme.bodySmall?.color,
                                       ),
                                       tooltip: 'Contribution options',
-                                      onPressed: () =>
-                                          _showContributionOptions(context, item),
+                                      onPressed: () => _showContributionOptions(
+                                        context,
+                                        item,
+                                      ),
                                     ),
                                   ),
                                   Padding(
                                     padding: const EdgeInsets.only(
-                                        left: 16, right: 16, bottom: 16),
+                                      left: 16,
+                                      right: 16,
+                                      bottom: 16,
+                                    ),
                                     child: bodyWidget,
                                   ),
                                 ],
@@ -1035,7 +1154,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 _visibleCount += 10;
                               });
                             },
-                            icon: const Icon(Icons.expand_more_rounded, size: 18),
+                            icon: const Icon(
+                              Icons.expand_more_rounded,
+                              size: 18,
+                            ),
                             label: const Text(
                               'Load More',
                               style: TextStyle(fontWeight: FontWeight.bold),
@@ -1064,46 +1186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFacebookIntroRow({
-    required ThemeData theme,
-    required IconData icon,
-    String? prefixText,
-    required String boldText,
-    String? suffixText,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          size: 22,
-          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyLarge?.color,
-              ),
-              children: [
-                if (prefixText != null) TextSpan(text: prefixText),
-                TextSpan(
-                  text: boldText,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                if (suffixText != null)
-                  TextSpan(
-                    text: suffixText,
-                    style: TextStyle(color: theme.textTheme.bodySmall?.color),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+
 }
 
 class EditProfileScreen extends StatefulWidget {

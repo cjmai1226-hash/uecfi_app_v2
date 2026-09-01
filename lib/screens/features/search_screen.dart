@@ -413,25 +413,36 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildFilterChip(String label, SearchCategory cat, ThemeData theme) {
     final isSelected = _selectedCategory == cat;
-    return FilterChip(
-      selected: isSelected,
-      label: Text(label),
-      labelStyle: TextStyle(
-        fontSize: 13,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-        color: isSelected ? Colors.white : theme.textTheme.bodyMedium?.color,
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onCategorySelected(cat),
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : (isDark ? const Color(0xFF3A3B3C) : const Color(0xFFE4E6EB)),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+              color: isSelected
+                  ? Colors.white
+                  : (isDark
+                        ? const Color(0xFFE4E6EB)
+                        : const Color(0xFF050505)),
+            ),
+          ),
+        ),
       ),
-      selectedColor: theme.colorScheme.primary,
-      backgroundColor: theme.brightness == Brightness.dark
-          ? const Color(0xFF3A3B3C)
-          : const Color(0xFFE4E6EB),
-      side: BorderSide.none,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-      ),
-      showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      onSelected: (_) => _onCategorySelected(cat),
     );
   }
 
@@ -556,7 +567,7 @@ class _SearchScreenState extends State<SearchScreen> {
         typeLabel = 'PRAYER';
         break;
       case SearchResultType.bylaw:
-        typeColor = const Color(0xFF00A400); // Meta Green
+        typeColor = const Color(0xFFD97706); // Warm Amber
         typeIcon = Icons.description_rounded;
         typeLabel = 'BYLAW';
         break;

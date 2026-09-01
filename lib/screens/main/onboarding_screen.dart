@@ -62,6 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   String _tempAvatarPath = '';
   String _tempCoverPath = '';
+  bool _hasAcceptedTerms = false;
 
   @override
   void initState() {
@@ -69,7 +70,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final uniqueNum = DateTime.now().millisecondsSinceEpoch
         .toString()
         .substring(7);
-    _memberIdController.text = 'MEM-$uniqueNum';
+    _memberIdController.text = 'USER#$uniqueNum';
     _positionController.text = 'Member';
     _loadDatabaseData();
   }
@@ -260,7 +261,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final Directory appDir = await getApplicationDocumentsDirectory();
       final String fileName =
           'onboarding_${isAvatar ? "avatar" : "cover"}_${DateTime.now().millisecondsSinceEpoch}${p.extension(pickedFile.path)}';
-      final File savedImage = await File(pickedFile.path).copy('${appDir.path}/$fileName');
+      final File savedImage = await File(
+        pickedFile.path,
+      ).copy('${appDir.path}/$fileName');
 
       setState(() {
         if (isAvatar) {
@@ -304,10 +307,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             clipBehavior: Clip.antiAlias,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: theme.dividerColor,
-                width: 1,
-              ),
+              side: BorderSide(color: theme.dividerColor, width: 1),
             ),
             child: SizedBox(
               height: 240,
@@ -321,7 +321,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     child: GestureDetector(
                       onTap: () => _pickOnboardingImage(false),
                       child: Container(
-                        color: isDark ? const Color(0xFF242526) : const Color(0xFFF0F2F5),
+                        color: isDark
+                            ? const Color(0xFF242526)
+                            : const Color(0xFFF0F2F5),
                         child: _tempCoverPath.isNotEmpty
                             ? Image.file(
                                 File(_tempCoverPath),
@@ -373,7 +375,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                           child: CircleAvatar(
                             radius: 50,
-                            backgroundColor: isDark ? const Color(0xFF3A3B3C) : Colors.white,
+                            backgroundColor: isDark
+                                ? const Color(0xFF3A3B3C)
+                                : Colors.white,
                             backgroundImage: _tempAvatarPath.isNotEmpty
                                 ? FileImage(File(_tempAvatarPath))
                                 : null,
@@ -394,7 +398,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          
+
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -407,11 +411,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.lock_rounded,
-                  color: Colors.orange,
-                  size: 20,
-                ),
+                const Icon(Icons.lock_rounded, color: Colors.orange, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -491,6 +491,149 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTermsSlide(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Terms & Agreements',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Please review and accept our guidelines before continuing.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.textTheme.bodySmall?.color,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Scrollable Card showing the Terms text
+          Container(
+            height: 320,
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: theme.dividerColor, width: 1),
+            ),
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTermSection(
+                      title: '1. Acceptance of Terms',
+                      description:
+                          'By accessing and using this application, you accept and agree to be bound by the terms and provisions of this agreement.',
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTermSection(
+                      title: '2. Purpose and Conduct',
+                      description:
+                          'This application is designed to foster community and spiritual growth. Users are expected to maintain respectful, appropriate, and constructive conduct in all interactions.',
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTermSection(
+                      title: '3. User Submissions',
+                      description:
+                          'Any content submitted by users (such as posts, comments, or directory updates) must not be malicious, offensive, or infringe upon the rights of others.',
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTermSection(
+                      title: '4. Privacy and Data',
+                      description:
+                          'We are committed to protecting your privacy. Personal information collected through forms or profiles will be used solely for community directory and application functionality purposes.',
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTermSection(
+                      title: '5. Intellectual Property',
+                      description:
+                          'All content included on the app, such as text, graphics, logos, images, and software, is the property of the organization or its content suppliers.',
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTermSection(
+                      title: '6. Disclaimer',
+                      description:
+                          'The application and its content are provided "as is". We make no warranties regarding the accuracy or completeness of the informational directories provided.',
+                      theme: theme,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Checkbox / Switch to Accept Terms
+          Row(
+            children: [
+              Checkbox(
+                value: _hasAcceptedTerms,
+                onChanged: (val) {
+                  setState(() {
+                    _hasAcceptedTerms = val ?? false;
+                  });
+                },
+                activeColor: theme.colorScheme.primary,
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _hasAcceptedTerms = !_hasAcceptedTerms;
+                    });
+                  },
+                  child: Text(
+                    'I accept and agree to the Terms & Agreements',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTermSection({
+    required String title,
+    required String description,
+    required ThemeData theme,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          description,
+          style: theme.textTheme.bodySmall?.copyWith(height: 1.4, fontSize: 12),
+        ),
+      ],
     );
   }
 
@@ -927,7 +1070,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           TextFormField(
             controller: _positionController,
             decoration: const InputDecoration(
-              hintText: 'e.g. Member, Pastor, Deacon, Choir',
+              hintText: 'e.g. Member, President, Medium, Vice-President',
             ),
           ),
         ],
@@ -1106,7 +1249,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const totalPages = 5;
+    const totalPages = 6;
     final isLastPage = _currentPage == totalPages - 1;
 
     return Scaffold(
@@ -1149,6 +1292,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                   children: [
                     _buildWelcomeSlide(theme),
+                    _buildTermsSlide(theme),
                     _buildProfileSlide(theme),
                     _buildChurchInfoSlide(theme),
                     _buildPhotosSlide(theme),
@@ -1191,86 +1335,97 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: double.infinity,
                     height: 50,
                     child: FilledButton(
-                      onPressed: () async {
-                        if (_currentPage == 1) {
-                          if (!_formKey.currentState!.validate()) {
-                            return;
-                          }
+                      onPressed: (_currentPage == 1 && !_hasAcceptedTerms)
+                          ? null
+                          : () async {
+                              if (_currentPage == 2) {
+                                if (!_formKey.currentState!.validate()) {
+                                  return;
+                                }
 
-                          final messenger = ScaffoldMessenger.of(context);
-                          final navigator = Navigator.of(context);
+                                final messenger = ScaffoldMessenger.of(context);
+                                final navigator = Navigator.of(context);
 
-                          // Show loading overlay
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (dialogContext) => const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-
-                          final nickname = _nicknameController.text.trim().isEmpty
-                              ? 'Member'
-                              : _nicknameController.text.trim();
-                          final email = _emailController.text.trim();
-
-                          bool hasError = false;
-
-                          try {
-                            final exists = await FirestoreService().checkNicknameExists(nickname);
-                            if (exists) {
-                              hasError = true;
-                              navigator.pop(); // dismiss loading
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Nickname is already taken. Please choose a different one.'),
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: Colors.orangeAccent,
-                                ),
-                              );
-                              return;
-                            }
-
-                            if (email.isNotEmpty) {
-                              final emailExists = await FirestoreService().checkEmailExists(email);
-                              if (emailExists) {
-                                hasError = true;
-                                navigator.pop(); // dismiss loading
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('This email address is already registered. Please use a different email or recover your profile in Settings.'),
-                                    behavior: SnackBarBehavior.floating,
-                                    backgroundColor: Colors.orangeAccent,
+                                // Show loading overlay
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (dialogContext) => const Center(
+                                    child: CircularProgressIndicator(),
                                   ),
                                 );
-                                return;
+
+                                final nickname =
+                                    _nicknameController.text.trim().isEmpty
+                                    ? 'Member'
+                                    : _nicknameController.text.trim();
+                                final email = _emailController.text.trim();
+
+                                bool hasError = false;
+
+                                try {
+                                  final exists = await FirestoreService()
+                                      .checkNicknameExists(nickname);
+                                  if (exists) {
+                                    hasError = true;
+                                    navigator.pop(); // dismiss loading
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Nickname is already taken. Please choose a different one.',
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.orangeAccent,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  if (email.isNotEmpty) {
+                                    final emailExists = await FirestoreService()
+                                        .checkEmailExists(email);
+                                    if (emailExists) {
+                                      hasError = true;
+                                      navigator.pop(); // dismiss loading
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'This email address is already registered. Please use a different email or recover your profile in Settings.',
+                                          ),
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.orangeAccent,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                  }
+                                } catch (e) {
+                                  debugPrint(
+                                    'Error verifying details during onboarding: $e',
+                                  );
+                                }
+
+                                if (!hasError) {
+                                  navigator.pop(); // dismiss loading
+                                }
+                              } else if (_currentPage == 3) {
+                                if (!_formKey.currentState!.validate()) {
+                                  return;
+                                }
                               }
-                            }
-                          } catch (e) {
-                            debugPrint('Error verifying details during onboarding: $e');
-                          }
 
-                          if (!hasError) {
-                            navigator.pop(); // dismiss loading
-                          }
-                        } else if (_currentPage == 2) {
-                          if (!_formKey.currentState!.validate()) {
-                            return;
-                          }
-                        }
-
-                        if (isLastPage) {
-                          _onFinishOnboarding();
-                        } else {
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeInOut,
-                          );
-                        }
-                      },
+                              if (isLastPage) {
+                                _onFinishOnboarding();
+                              } else {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 400),
+                                  curve: Curves.easeInOut,
+                                );
+                              }
+                            },
                       style: FilledButton.styleFrom(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(28),
                         ),
                       ),
                       child: Text(
