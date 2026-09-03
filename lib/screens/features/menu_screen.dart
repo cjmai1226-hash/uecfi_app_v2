@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
 import '../../services/user_service.dart';
@@ -14,6 +13,7 @@ import 'help_feedback_screen.dart';
 import '../admin/admin_tickets_screen.dart';
 import '../admin/admin_songs_screen.dart';
 import '../admin/admin_center_updates_screen.dart';
+import '../../widgets/user_avatar.dart';
 
 class MenuScreen extends StatelessWidget {
   final bool showAppBar;
@@ -117,12 +117,6 @@ class MenuScreen extends StatelessWidget {
                 final nickname = profile.nickname.isNotEmpty
                     ? profile.nickname
                     : 'Member';
-                final initial =
-                    nickname.isNotEmpty ? nickname[0].toUpperCase() : 'M';
-                final hasAvatar = profile.avatarPath.isNotEmpty;
-                final isDevChristian =
-                    nickname.toLowerCase() == 'devchristian';
-
                 return Card(
                   color: theme.cardColor,
                   shape: RoundedRectangleBorder(
@@ -143,32 +137,11 @@ class MenuScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          CircleAvatar(
+                          UserAvatar(
+                            authorName: nickname,
+                            localAvatarPath: profile.avatarPath,
+                            avatarUrl: profile.avatarUrl,
                             radius: 26,
-                            backgroundColor: theme.colorScheme.primary,
-                            backgroundImage: !isDevChristian && hasAvatar
-                                ? FileImage(File(profile.avatarPath))
-                                : null,
-                            child: isDevChristian
-                                ? Padding(
-                                    padding: const EdgeInsets.all(3.0),
-                                    child: ClipOval(
-                                      child: Image.asset(
-                                        'assets/images/brand_mark.png',
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                  )
-                                : (!hasAvatar
-                                    ? Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 20,
-                                        ),
-                                      )
-                                    : null),
                           ),
                           const SizedBox(width: 14),
                           Expanded(

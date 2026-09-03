@@ -16,6 +16,7 @@ class FirestoreService {
     required String authorEmail,
     required String authorNickname,
     String? bgGradient,
+    String? avatarUrl,
   }) async {
     final Map<String, dynamic> data = {
       'content': content,
@@ -29,6 +30,9 @@ class FirestoreService {
         bgGradient.isNotEmpty &&
         bgGradient != 'default') {
       data['bgGradient'] = bgGradient;
+    }
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      data['avatarUrl'] = avatarUrl;
     }
     await _firestore.collection('community_posts').add(data);
   }
@@ -46,12 +50,12 @@ class FirestoreService {
       'editedAt': FieldValue.serverTimestamp(),
       'isEdited': true,
     };
-    if (bgGradient != null) {
-      if (bgGradient.isNotEmpty && bgGradient != 'default') {
-        data['bgGradient'] = bgGradient;
-      } else {
-        data['bgGradient'] = FieldValue.delete();
-      }
+    if (bgGradient != null &&
+        bgGradient.isNotEmpty &&
+        bgGradient != 'default') {
+      data['bgGradient'] = bgGradient;
+    } else {
+      data['bgGradient'] = FieldValue.delete();
     }
     await _firestore.collection('community_posts').doc(postId).update(data);
   }
@@ -240,16 +244,22 @@ class FirestoreService {
     required String content,
     required String authorEmail,
     required String authorNickname,
+    String? avatarUrl,
   }) async {
     final postRef = _firestore.collection('community_posts').doc(postId);
 
-    // Write to subcollection
-    await postRef.collection('comments').add({
+    final Map<String, dynamic> commentData = {
       'content': content,
       'authorEmail': authorEmail,
       'authorNickname': authorNickname,
       'timestamp': FieldValue.serverTimestamp(),
-    });
+    };
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      commentData['avatarUrl'] = avatarUrl;
+    }
+
+    // Write to subcollection
+    await postRef.collection('comments').add(commentData);
 
     // Increment comment count on parent
     await postRef.update({'comments': FieldValue.increment(1)});
@@ -480,7 +490,12 @@ class FirestoreService {
 
       final List<Map<String, dynamic>> members = [];
       for (var doc in query.docs) {
-        members.add(doc.data());
+        final data = Map<String, dynamic>.from(doc.data());
+        if (!data.containsKey('email') ||
+            (data['email'] as String? ?? '').isEmpty) {
+          data['email'] = doc.id;
+        }
+        members.add(data);
       }
       return members;
     } catch (e) {

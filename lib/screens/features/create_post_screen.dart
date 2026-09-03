@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
 import '../../services/user_service.dart';
 import '../../models/user_profile.dart';
+import '../../models/blog_post.dart';
 import '../../services/firestore_service.dart';
 import '../main/home_screen.dart';
 import '../../services/ad_service.dart';
 import '../../models/post_gradient.dart';
+import '../../widgets/user_avatar.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final BlogPost? postToEdit;
@@ -101,6 +102,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       likesCount: 0,
       comments: [],
       bgGradient: effectiveGradientId,
+      avatarUrl: profile.avatarUrl,
     );
 
     // Insert at the top of the local fallback feed list
@@ -113,6 +115,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         authorEmail: profile.email,
         authorNickname: cleanAuthor,
         bgGradient: effectiveGradientId,
+        avatarUrl: profile.avatarUrl,
       );
       await FirestoreService().incrementUserContributions(profile.email);
     } catch (e) {
@@ -195,7 +198,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       valueListenable: UserService.instance,
       builder: (context, profile, child) {
         final nickname = profile.nickname.isNotEmpty ? profile.nickname : 'Member';
-        final initial = nickname.isNotEmpty ? nickname[0].toUpperCase() : 'M';
         final hasPostContent = _controller.text.trim().isNotEmpty;
 
         return Scaffold(
@@ -235,31 +237,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
                 child: Row(
                   children: [
-                    CircleAvatar(
+                    UserAvatar(
+                      authorName: nickname,
+                      localAvatarPath: profile.avatarPath,
+                      avatarUrl: profile.avatarUrl,
                       radius: 20,
-                      backgroundColor: isDark ? const Color(0xFF3A3B3C) : const Color(0xFFE4E6EB),
-                      backgroundImage: nickname.toLowerCase() != 'devchristian' && profile.avatarPath.isNotEmpty
-                          ? FileImage(File(profile.avatarPath))
-                          : null,
-                      child: nickname.toLowerCase() == 'devchristian'
-                          ? Padding(
-                              padding: const EdgeInsets.all(3.0),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/images/brand_mark.png',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            )
-                          : (profile.avatarPath.isEmpty
-                              ? Text(
-                                  initial,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                )
-                              : null),
                     ),
                     const SizedBox(width: 12),
                     Column(

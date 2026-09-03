@@ -1,8 +1,4 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import '../../services/database_helper.dart';
 import '../../services/user_service.dart';
 import '../../models/center_model.dart';
@@ -59,9 +55,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isManualCenter = false;
   bool _isManualArea = false;
   bool _isLoadingDb = true;
-
-  String _tempAvatarPath = '';
-  String _tempCoverPath = '';
   bool _hasAcceptedTerms = false;
 
   @override
@@ -70,7 +63,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final uniqueNum = DateTime.now().millisecondsSinceEpoch
         .toString()
         .substring(7);
-    _memberIdController.text = 'USER#$uniqueNum';
+    _memberIdController.text = 'USER$uniqueNum';
     _positionController.text = 'Member';
     _loadDatabaseData();
   }
@@ -208,13 +201,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       position: position,
     );
 
-    if (_tempAvatarPath.isNotEmpty || _tempCoverPath.isNotEmpty) {
-      await UserService.instance.updateProfileImages(
-        avatarPath: _tempAvatarPath.isNotEmpty ? _tempAvatarPath : null,
-        coverPath: _tempCoverPath.isNotEmpty ? _tempCoverPath : null,
-      );
-    }
-
     // Save profile online to Firestore
     try {
       await FirestoreService().saveUserProfile(
@@ -244,189 +230,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           return FadeTransition(opacity: animation, child: child);
         },
         transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
-  }
-
-  Future<void> _pickOnboardingImage(bool isAvatar) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-      );
-
-      if (pickedFile == null) return;
-
-      final Directory appDir = await getApplicationDocumentsDirectory();
-      final String fileName =
-          'onboarding_${isAvatar ? "avatar" : "cover"}_${DateTime.now().millisecondsSinceEpoch}${p.extension(pickedFile.path)}';
-      final File savedImage = await File(
-        pickedFile.path,
-      ).copy('${appDir.path}/$fileName');
-
-      setState(() {
-        if (isAvatar) {
-          _tempAvatarPath = savedImage.path;
-        } else {
-          _tempCoverPath = savedImage.path;
-        }
-      });
-    } catch (e) {
-      debugPrint('Error picking onboarding image: $e');
-    }
-  }
-
-  Widget _buildPhotosSlide(ThemeData theme) {
-    final isDark = theme.brightness == Brightness.dark;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          Text(
-            'Customize Your Profile',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add photos to personalize your feed posts. Photos are saved locally to protect your privacy and are never uploaded online.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodySmall?.color,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 28),
-
-          Card(
-            clipBehavior: Clip.antiAlias,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: theme.dividerColor, width: 1),
-            ),
-            child: SizedBox(
-              height: 240,
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 150,
-                    child: GestureDetector(
-                      onTap: () => _pickOnboardingImage(false),
-                      child: Container(
-                        color: isDark
-                            ? const Color(0xFF242526)
-                            : const Color(0xFFF0F2F5),
-                        child: _tempCoverPath.isNotEmpty
-                            ? Image.file(
-                                File(_tempCoverPath),
-                                fit: BoxFit.cover,
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add_photo_alternate_rounded,
-                                    size: 36,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Add Cover Photo',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 95,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: GestureDetector(
-                        onTap: () => _pickOnboardingImage(true),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: theme.cardColor,
-                              width: 4,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: isDark
-                                ? const Color(0xFF3A3B3C)
-                                : Colors.white,
-                            backgroundImage: _tempAvatarPath.isNotEmpty
-                                ? FileImage(File(_tempAvatarPath))
-                                : null,
-                            child: _tempAvatarPath.isEmpty
-                                ? Icon(
-                                    Icons.add_a_photo_rounded,
-                                    size: 32,
-                                    color: theme.colorScheme.primary,
-                                  )
-                                : null,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.orangeAccent.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.lock_rounded, color: Colors.orange, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Stored Locally: These images will not be sent to Firestore to respect your storage & privacy preference.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.orange.shade800,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -1249,7 +1052,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const totalPages = 6;
+    const totalPages = 5;
     final isLastPage = _currentPage == totalPages - 1;
 
     return Scaffold(
@@ -1295,7 +1098,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     _buildTermsSlide(theme),
                     _buildProfileSlide(theme),
                     _buildChurchInfoSlide(theme),
-                    _buildPhotosSlide(theme),
                     _buildSummarySlide(theme),
                   ],
                 ),

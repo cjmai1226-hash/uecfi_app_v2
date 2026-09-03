@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/user_service.dart';
 import '../models/user_profile.dart';
 import '../screens/features/profile_screen.dart';
+import 'user_avatar.dart';
 
 class FeedComposerCard extends StatelessWidget {
   final String placeholderTemplate;
@@ -28,11 +28,6 @@ class FeedComposerCard extends StatelessWidget {
       builder: (context, profile, _) {
         final userNickname =
             profile.nickname.isNotEmpty ? profile.nickname : 'Member';
-        final initial =
-            userNickname.isNotEmpty ? userNickname[0].toUpperCase() : 'M';
-        final hasAvatar = profile.avatarPath.isNotEmpty;
-        final isDevChristian =
-            userNickname.toLowerCase() == 'devchristian';
 
         final displayText = placeholderTemplate.contains('{name}')
             ? placeholderTemplate.replaceAll('{name}', userNickname)
@@ -74,32 +69,11 @@ class FeedComposerCard extends StatelessWidget {
                           ),
                         );
                       },
-                      child: CircleAvatar(
+                      child: UserAvatar(
+                        authorName: userNickname,
+                        localAvatarPath: profile.avatarPath,
+                        avatarUrl: profile.avatarUrl,
                         radius: 20,
-                        backgroundColor: theme.colorScheme.primary,
-                        backgroundImage: !isDevChristian && hasAvatar
-                            ? FileImage(File(profile.avatarPath))
-                            : null,
-                        child: isDevChristian
-                            ? Padding(
-                                padding: const EdgeInsets.all(2.5),
-                                child: ClipOval(
-                                  child: Image.asset(
-                                    'assets/images/brand_mark.png',
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
-                              )
-                            : (!hasAvatar
-                                ? Text(
-                                    initial,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  )
-                                : null),
                       ),
                     ),
                     const SizedBox(width: 12),

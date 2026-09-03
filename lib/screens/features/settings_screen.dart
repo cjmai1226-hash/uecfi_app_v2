@@ -248,8 +248,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               final centerAddress = profileData['centerAddress']?.toString() ?? '';
                               final memberId = profileData['uid']?.toString() ?? '';
                               final position = profileData['position']?.toString() ?? 'Member';
+                              final avatarUrl = profileData['avatarUrl']?.toString();
+                              final coverUrl = profileData['coverUrl']?.toString();
+                              final contributions = profileData['contributions'] as int? ?? 0;
+                              final isLocked = profileData['isLocked'] == true;
 
-                              await UserService.instance.updateProfile(
+                              await UserService.instance.restoreFullProfile(
                                 nickname: nickname,
                                 firstName: dbFirstName,
                                 middleName: dbMiddleName,
@@ -261,6 +265,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 memberId: memberId,
                                 email: emailText,
                                 position: position,
+                                avatarUrl: avatarUrl,
+                                coverUrl: coverUrl,
+                                contributions: contributions,
+                                isLocked: isLocked,
                               );
 
                               if (context.mounted) {
@@ -517,6 +525,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             buildSectionHeader('Preferences'),
             Card(
               color: theme.cardColor,
+              clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: theme.dividerColor),
@@ -573,6 +582,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             buildSectionHeader('Appearance'),
             Card(
               color: theme.cardColor,
+              clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: theme.dividerColor),
@@ -601,6 +611,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             buildSectionHeader('Account'),
             Card(
               color: theme.cardColor,
+              clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: theme.dividerColor),
@@ -628,6 +639,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             buildSectionHeader('Legal & About'),
             Card(
               color: theme.cardColor,
+              clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
                 side: BorderSide(color: theme.dividerColor),

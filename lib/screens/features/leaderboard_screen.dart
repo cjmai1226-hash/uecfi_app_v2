@@ -1,10 +1,12 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 import '../../models/user_profile.dart';
 import '../../widgets/contributor_badge.dart';
+import '../../widgets/user_avatar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'public_profile_screen.dart';
+import 'profile_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   final bool showAppBar;
@@ -37,6 +39,38 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       _leaderboardFuture = _fetchLeaderboard();
     });
     await _leaderboardFuture;
+  }
+
+  void _openMemberProfile(
+    BuildContext context,
+    String name,
+    String email,
+    String? avatarUrl,
+    String? localCenter,
+  ) {
+    final currentUser = UserService.instance.value;
+    final isSelf = (email.isNotEmpty &&
+            email.toLowerCase() == currentUser.email.toLowerCase()) ||
+        name.toLowerCase() == currentUser.nickname.toLowerCase();
+
+    if (isSelf) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PublicProfileScreen(
+            userEmail: email,
+            initialNickname: name,
+            initialAvatarUrl: avatarUrl,
+            initialLocalCenter: localCenter,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -93,20 +127,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                   final docs = snapshot.data?.docs ?? [];
 
-                  // Calculate current user standing
-                  int currentUserRank = -1;
-                  int currentUserContributions = currentUser.contributions;
-                  for (int i = 0; i < docs.length; i++) {
-                    final data = docs[i].data() as Map<String, dynamic>;
-                    if (data['email']?.toString().toLowerCase() ==
-                        currentUser.email.toLowerCase()) {
-                      currentUserRank = i + 1;
-                      currentUserContributions =
-                          data['contributions'] as int? ?? 0;
-                      break;
-                    }
-                  }
-
                   final top3Docs = docs.take(3).toList();
                   final restDocs = docs.length > 3
                       ? docs.sublist(3)
@@ -131,18 +151,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             top3Docs,
                             currentUser,
                           ),
-
-                        // Current User Standing & Next Tier Progress Card
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          child: _buildUserProgressCard(
-                            context,
-                            theme,
-                            currentUser,
-                            currentUserRank,
-                            currentUserContributions,
-                          ),
-                        ),
 
                         // Section Title for Remaining Ranks
                         if (restDocs.isNotEmpty) ...[
@@ -172,76 +180,108 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Card(
-                              color: theme.cardColor,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: BorderSide(color: theme.dividerColor),
-                              ),
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: displayedRestCount,
-                                separatorBuilder: (context, idx) => Divider(
-                                  color: theme.dividerColor,
-                                  height: 1,
-                                ),
-                                itemBuilder: (context, index) {
-                                  final data =
-                                      restDocs[index].data()
-                                          as Map<String, dynamic>;
-                                  final String name = data['name'] ?? 'Member';
-                                  final String localCenter =
-                                      data['centerName'] ?? '';
-                                  final int contributions =
-                                      data['contributions'] as int? ?? 0;
-                                  final String email = data['email'] ?? '';
-                                  final bool isSelf =
-                                      email.toLowerCase() ==
-                                      currentUser.email.toLowerCase();
-                                  final int rank = index + 4;
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: displayedRestCount,
+                              itemBuilder: (context, index) {
+                                final data =
+                                    restDocs[index].data()
+                                        as Map<String, dynamic>;
+                                final String name = data['name'] ?? 'Member';
+                                final String localCenter =
+                                    data['centerName'] ?? '';
+                                final int contributions =
+                                    data['contributions'] as int? ?? 0;
+                                final String email = data['email'] ?? '';
+                                final bool isSelf =
+                                    email.toLowerCase() ==
+                                    currentUser.email.toLowerCase();
+                                final int rank = index + 4;
 
-                                  return ListTile(
-                                    tileColor: isSelf
-                                        ? theme.colorScheme.primary.withValues(
-                                            alpha: isDark ? 0.15 : 0.08,
-                                          )
-                                        : null,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        index == 0
-                                            ? 16
-                                            : (index == displayedRestCount - 1
-                                                  ? 16
-                                                  : 0),
-                                      ),
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    color: theme.cardColor,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: isSelf
+                                          ? theme.colorScheme.primary.withValues(
+                                              alpha: 0.5,
+                                            )
+                                          : theme.dividerColor,
+                                      width: isSelf ? 1.5 : 1,
                                     ),
-                                    leading: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: isSelf
-                                            ? theme.colorScheme.primary
-                                            : theme.dividerColor.withValues(
-                                                alpha: 0.4,
-                                              ),
-                                        borderRadius: BorderRadius.circular(10),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: isDark ? 0.2 : 0.03,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
                                       ),
-                                      child: Center(
-                                        child: Text(
-                                          '#$rank',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
+                                    ],
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    borderRadius: BorderRadius.circular(16),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: ListTile(
+                                      tileColor: isSelf
+                                          ? theme.colorScheme.primary.withValues(
+                                              alpha: isDark ? 0.15 : 0.08,
+                                            )
+                                          : null,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 4,
+                                      ),
+                                    leading: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 32,
+                                          height: 32,
+                                          decoration: BoxDecoration(
                                             color: isSelf
-                                                ? Colors.white
-                                                : theme
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.color,
+                                                ? theme.colorScheme.primary
+                                                : theme.dividerColor.withValues(
+                                                    alpha: 0.4,
+                                                  ),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '#$rank',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: isSelf
+                                                    ? Colors.white
+                                                    : theme
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 10),
+                                        UserAvatar(
+                                          authorName: name,
+                                          localAvatarPath: isSelf
+                                              ? currentUser.avatarPath
+                                              : null,
+                                          avatarUrl:
+                                              data['avatarUrl'] as String?,
+                                          radius: 18,
+                                        ),
+                                      ],
                                     ),
                                     title: Row(
                                       children: [
@@ -292,7 +332,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                       decoration: BoxDecoration(
                                         color: theme.colorScheme.primary
                                             .withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                       ),
                                       child: Text(
                                         '$contributions pts',
@@ -303,12 +344,63 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                         ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
+                                    onTap: () => _openMemberProfile(
+                                      context,
+                                      name,
+                                      email,
+                                      data['avatarUrl'] as String?,
+                                      localCenter,
+                                    ),
+                                  ),
+                                ),
+                              );
+                              },
                             ),
                           ),
-                          const SizedBox(height: 80),
+                          // End of Results indicator
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: 16,
+                              bottom: 80,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 1,
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Icon(
+                                  Icons.flag_outlined,
+                                  size: 14,
+                                  color: theme.textTheme.bodySmall?.color
+                                      ?.withValues(alpha: 0.6),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'End of results',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: theme.textTheme.bodySmall?.color
+                                        ?.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  width: 36,
+                                  height: 1,
+                                  color: theme.dividerColor.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ] else if (docs.isEmpty) ...[
                           Padding(
                             padding: const EdgeInsets.symmetric(
@@ -515,7 +607,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     required bool isDark,
   }) {
     final name = data['name'] ?? 'Member';
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'M';
     final contributions = data['contributions'] as int? ?? 0;
     final String localCenter = data['centerName'] ?? '';
     final isDevChristian = name.toLowerCase() == 'devchristian';
@@ -554,6 +645,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     }
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -574,419 +666,218 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ]
             : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        children: [
-          // Avatar + Rank Badge (and Crown for #1)
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: gradientColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accentColor.withValues(
-                        alpha: rank == 1 ? 0.35 : 0.2,
-                      ),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: rank == 1 ? 24 : 22,
-                  backgroundColor: theme.cardColor,
-                  child: isDevChristian
-                      ? Padding(
-                          padding: const EdgeInsets.all(2),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/brand_mark.png',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        )
-                      : (isSelf && currentUser.avatarPath.isNotEmpty
-                            ? ClipOval(
-                                child: Image.file(
-                                  File(currentUser.avatarPath),
-                                  fit: BoxFit.cover,
-                                  width: rank == 1 ? 48 : 44,
-                                  height: rank == 1 ? 48 : 44,
-                                ),
-                              )
-                            : Text(
-                                initial,
-                                style: TextStyle(
-                                  fontSize: rank == 1 ? 18 : 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: accentColor,
-                                ),
-                              )),
-                ),
-              ),
-
-              // Crown on top for #1
-              if (rank == 1)
-                const Positioned(
-                  top: -12,
-                  child: Text('👑', style: TextStyle(fontSize: 16)),
-                ),
-
-              // Rank Badge pill
-              Positioned(
-                bottom: -4,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5.5,
-                    vertical: 0.5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: accentColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white, width: 1),
-                  ),
-                  child: Text(
-                    '#$rank',
-                    style: const TextStyle(
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _openMemberProfile(
+            context,
+            name,
+            data['email'] ?? '',
+            data['avatarUrl'] as String?,
+            localCenter,
           ),
-
-          const SizedBox(width: 14),
-
-          // User Info Column
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+            // Avatar + Rank Badge (and Crown for #1)
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 1.5,
-                  ),
+                  padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: isDark ? 0.16 : 0.12),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(tagIcon, size: 10.5, color: accentColor),
-                      const SizedBox(width: 3),
-                      Text(
-                        tagLabel,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          color: accentColor,
-                          letterSpacing: 0.5,
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: gradientColors,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(
+                          alpha: rank == 1 ? 0.35 : 0.2,
                         ),
+                        blurRadius: 6,
                       ),
                     ],
                   ),
+                  child: UserAvatar(
+                    authorName: name,
+                    localAvatarPath: isSelf ? currentUser.avatarPath : null,
+                    avatarUrl: data['avatarUrl'] as String?,
+                    radius: rank == 1 ? 24 : 22,
+                    backgroundColor: theme.cardColor,
+                    textStyle: TextStyle(
+                      fontSize: rank == 1 ? 18 : 16,
+                      fontWeight: FontWeight.bold,
+                      color: accentColor,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          fontWeight: FontWeight.bold,
-                          color: isSelf ? theme.colorScheme.primary : null,
-                        ),
+
+                // Crown on top for #1
+                if (rank == 1)
+                  const Positioned(
+                    top: -12,
+                    child: Text('👑', style: TextStyle(fontSize: 16)),
+                  ),
+
+                // Rank Badge pill
+                Positioned(
+                  bottom: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 5.5,
+                      vertical: 0.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1),
+                    ),
+                    child: Text(
+                      '#$rank',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black87,
                       ),
                     ),
-                    if (isDevChristian) ...[
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.verified_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 14,
-                      ),
-                    ],
-                    const SizedBox(width: 4),
-                    getContributorBadge(contributions, theme, size: 14),
-                  ],
+                  ),
                 ),
-                if (localCenter.isNotEmpty) ...[
-                  const SizedBox(height: 1.5),
+              ],
+            ),
+
+            const SizedBox(width: 14),
+
+            // User Info Column
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accentColor.withValues(alpha: isDark ? 0.16 : 0.12),
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(tagIcon, size: 10.5, color: accentColor),
+                        const SizedBox(width: 3),
+                        Text(
+                          tagLabel,
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            color: accentColor,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 3.5),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isDevChristian) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.verified_rounded,
+                          color: theme.colorScheme.primary,
+                          size: 15,
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (localCenter.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      localCenter,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: theme.textTheme.bodySmall?.color,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // Points Pill
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: pillGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: pillGradient.first.withValues(alpha: 0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    localCenter,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    '$contributions',
                     style: TextStyle(
-                      fontSize: 11,
-                      color: theme.textTheme.bodySmall?.color,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: rank == 1 ? Colors.black87 : Colors.white,
+                      height: 1.1,
+                    ),
+                  ),
+                  Text(
+                    'PTS',
+                    style: TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w900,
+                      color: rank == 1 ? Colors.black54 : Colors.white70,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
-              ],
-            ),
-          ),
-
-          const SizedBox(width: 8),
-
-          // Points Highlight Pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: pillGradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(11),
-              boxShadow: [
-                BoxShadow(
-                  color: accentColor.withValues(alpha: 0.25),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$contributions',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: rank == 1 ? Colors.black87 : Colors.white,
-                    height: 1.1,
-                  ),
-                ),
-                Text(
-                  'PTS',
-                  style: TextStyle(
-                    fontSize: 8.5,
-                    fontWeight: FontWeight.w900,
-                    color: rank == 1 ? Colors.black54 : Colors.white70,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUserProgressCard(
-    BuildContext context,
-    ThemeData theme,
-    UserProfile currentUser,
-    int userRank,
-    int points,
-  ) {
-    final isDark = theme.brightness == Brightness.dark;
-
-    // Calculate current tier and next target
-    String currentTierName;
-    String nextTierName;
-    int nextTierTarget;
-    double progress;
-
-    if (points >= 100) {
-      currentTierName = 'Pillar of the Community';
-      nextTierName = 'Max Tier Reached';
-      nextTierTarget = 100;
-      progress = 1.0;
-    } else if (points >= 50) {
-      currentTierName = 'Top Contributor';
-      nextTierName = 'Pillar (100 pts)';
-      nextTierTarget = 100;
-      progress = (points - 50) / (100 - 50);
-    } else if (points >= 10) {
-      currentTierName = 'Active Contributor';
-      nextTierName = 'Top (50 pts)';
-      nextTierTarget = 50;
-      progress = (points - 10) / (50 - 10);
-    } else {
-      currentTierName = 'Member';
-      nextTierName = 'Active (10 pts)';
-      nextTierTarget = 10;
-      progress = points / 10.0;
-    }
-    progress = progress.clamp(0.0, 1.0);
-
-    return Card(
-      color: theme.cardColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-          width: 1.5,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: theme.colorScheme.primary,
-                  backgroundImage:
-                      currentUser.avatarPath.isNotEmpty &&
-                          currentUser.nickname.toLowerCase() != 'devchristian'
-                      ? FileImage(File(currentUser.avatarPath))
-                      : null,
-                  child: currentUser.nickname.toLowerCase() == 'devchristian'
-                      ? Padding(
-                          padding: const EdgeInsets.all(2.5),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/images/brand_mark.png',
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        )
-                      : (currentUser.avatarPath.isEmpty
-                            ? Text(
-                                currentUser.nickname.isNotEmpty
-                                    ? currentUser.nickname[0].toUpperCase()
-                                    : 'M',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              )
-                            : null),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              currentUser.nickname.isNotEmpty
-                                  ? currentUser.nickname
-                                  : 'Your Standing',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          getContributorBadge(points, theme, size: 14),
-                        ],
-                      ),
-                      Text(
-                        currentTierName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        userRank > 0 ? '#$userRank' : 'Unranked',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      Text(
-                        '$points pts',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: theme.textTheme.bodySmall?.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Next Tier: $nextTierName',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: theme.hintColor,
-                  ),
-                ),
-                Text(
-                  points >= 100
-                      ? '100% Completed'
-                      : '$points / $nextTierTarget pts',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: isDark
-                    ? const Color(0xFF333333)
-                    : const Color(0xFFE0E0E0),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  theme.colorScheme.primary,
-                ),
               ),
             ),
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Future<void> _launchFacebookPage(BuildContext context) async {
@@ -1109,7 +1000,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                 // Rewards breakdown
                 Text(
-                  'Rewards & Recognition',
+                  '🏆 Season Contributor Rewards',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -1117,13 +1008,28 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: Text(
-                    'Special rewards and recognition may be awarded to the local Worship Centers of the top contributors of the season! This is a wonderful way to support and give back to your home church center. Check our official Facebook page for announcements, prize details, and guidelines.\n\nNote: Spamming, posting duplicate content, or abusing submissions will result in immediate disqualification and removal of your ranked status.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      height: 1.4,
-                      color: theme.textTheme.bodyMedium?.color?.withValues(
-                        alpha: 0.8,
+                  child: Text.rich(
+                    TextSpan(
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                        color: theme.textTheme.bodyMedium?.color?.withValues(
+                          alpha: 0.85,
+                        ),
                       ),
+                      children: const [
+                        TextSpan(
+                          text:
+                              'Top contributors of each season may receive special rewards and recognition from ',
+                        ),
+                        TextSpan(
+                          text: 'devchristian',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text:
+                              ' as a token of appreciation for their valuable contributions to the UECFI App.\n\nKeep contributing, keep helping the community, and you might be one of our next Top Contributors!\n\nCheck our official Facebook page for season announcements, reward details, and guidelines.',
+                        ),
+                      ],
                     ),
                   ),
                 ),

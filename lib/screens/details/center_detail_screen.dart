@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/center_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/user_service.dart';
+import '../features/profile_screen.dart';
+import '../features/public_profile_screen.dart';
 import 'suggest_center_edit_sheet.dart';
+import '../../widgets/user_avatar.dart';
 
 class CenterDetailScreen extends StatelessWidget {
   final CenterModel center;
@@ -276,6 +280,39 @@ class CenterDetailScreen extends StatelessWidget {
     }
   }
 
+  void _openMemberProfile(
+    BuildContext context, {
+    required String email,
+    required String nickname,
+    String? avatarUrl,
+    String? localCenter,
+  }) {
+    final currentUser = UserService.instance.value;
+    final isSelf = (email.isNotEmpty &&
+            email.toLowerCase() == currentUser.email.toLowerCase()) ||
+        (nickname.isNotEmpty &&
+            nickname.toLowerCase() == currentUser.nickname.toLowerCase());
+
+    if (isSelf) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PublicProfileScreen(
+            userEmail: email,
+            initialNickname: nickname,
+            initialAvatarUrl: avatarUrl,
+            initialLocalCenter: localCenter ?? center.name,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -304,7 +341,7 @@ class CenterDetailScreen extends StatelessWidget {
               children: [
                 // Cover banner placeholder (Facebook Blue header card)
                 Container(
-                  height: 120,
+                  height: 300,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -325,7 +362,7 @@ class CenterDetailScreen extends StatelessWidget {
                 ),
                 // Overlapping Center Avatar
                 Positioned(
-                  bottom: -50,
+                  bottom: -60,
                   left: 0,
                   right: 0,
                   child: Center(
@@ -345,7 +382,7 @@ class CenterDetailScreen extends StatelessWidget {
                         ],
                       ),
                       child: CircleAvatar(
-                        radius: 56,
+                        radius: 64,
                         backgroundColor: isDark
                             ? const Color(0xFF3A3B3C)
                             : const Color(0xFFE4E6EB),
@@ -354,7 +391,7 @@ class CenterDetailScreen extends StatelessWidget {
                               ? center.name[0].toUpperCase()
                               : 'W',
                           style: TextStyle(
-                            fontSize: 44,
+                            fontSize: 48,
                             fontWeight: FontWeight.bold,
                             color: theme.colorScheme.primary,
                           ),
@@ -365,7 +402,7 @@ class CenterDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 58), // Spacer for overlapping avatar
+            const SizedBox(height: 70), // Spacer for overlapping avatar
             // Worship Center details body
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -678,35 +715,19 @@ class CenterDetailScreen extends StatelessWidget {
                                     Divider(color: theme.dividerColor, height: 1),
                                 itemBuilder: (context, index) {
                                   final member = members[index];
-                                  final String rawFirstName =
-                                      member['firstName'] ?? '';
-                                  final String rawSurname =
-                                      member['surname'] ?? '';
                                   final String nickname = member['name'] ?? '';
-
                                   final String rawPosition =
                                       member['position'] ?? '';
                                   final String positionVal =
                                       rawPosition.trim().isEmpty
                                       ? 'Member'
                                       : rawPosition.trim();
-
-                                  final String firstName = _capitalize(
-                                    rawFirstName,
-                                  );
-                                  final String surname = _capitalize(rawSurname);
                                   final String position = _capitalize(
                                     positionVal,
                                   );
-
-                                  final String fullName = '$firstName $surname'
-                                      .trim();
-                                  final String displayName = fullName.isNotEmpty
-                                      ? fullName
-                                      : _capitalize(nickname);
-                                  final String initial = displayName.isNotEmpty
-                                      ? displayName[0].toUpperCase()
-                                      : 'M';
+                                  final String displayName = nickname.isNotEmpty
+                                      ? _capitalize(nickname)
+                                      : 'Member';
                                   final bool isDevChristian =
                                       nickname.toLowerCase() == 'devchristian';
 
@@ -715,31 +736,17 @@ class CenterDetailScreen extends StatelessWidget {
                                       horizontal: 16,
                                       vertical: 4,
                                     ),
-                                    leading: CircleAvatar(
+                                    onTap: () => _openMemberProfile(
+                                      context,
+                                      email: member['email'] ?? '',
+                                      nickname: nickname,
+                                      avatarUrl: member['avatarUrl'] as String?,
+                                      localCenter: center.name,
+                                    ),
+                                    leading: UserAvatar(
+                                      authorName: displayName,
+                                      avatarUrl: member['avatarUrl'] as String?,
                                       radius: 20,
-                                      backgroundColor: theme.colorScheme.primary
-                                          .withValues(alpha: 0.1),
-                                      child: isDevChristian
-                                          ? Padding(
-                                              padding: const EdgeInsets.all(
-                                                3.0,
-                                              ),
-                                              child: ClipOval(
-                                                child: Image.asset(
-                                                  'assets/images/brand_mark.png',
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              ),
-                                            )
-                                          : Text(
-                                              initial,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                    theme.colorScheme.primary,
-                                              ),
-                                            ),
                                     ),
                                     title: Row(
                                       children: [
@@ -761,11 +768,13 @@ class CenterDetailScreen extends StatelessWidget {
                                       ],
                                     ),
                                     subtitle: Text(
-                                      nickname.isNotEmpty
-                                          ? '$position • @$nickname'
-                                          : position,
+                                      position,
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(fontSize: 12),
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 20,
                                     ),
                                   );
                                 },

@@ -12,7 +12,10 @@ class UserProfile {
   final String position;
   final String avatarPath;
   final String coverPath;
+  final String avatarUrl;
+  final String coverUrl;
   final int contributions;
+  final bool isLocked;
 
   const UserProfile({
     this.nickname = '',
@@ -28,7 +31,10 @@ class UserProfile {
     this.position = 'Member',
     this.avatarPath = '',
     this.coverPath = '',
+    this.avatarUrl = '',
+    this.coverUrl = '',
     this.contributions = 0,
+    this.isLocked = false,
   });
 
   bool get isComplete =>
@@ -56,7 +62,10 @@ class UserProfile {
     String? position,
     String? avatarPath,
     String? coverPath,
+    String? avatarUrl,
+    String? coverUrl,
     int? contributions,
+    bool? isLocked,
   }) {
     return UserProfile(
       nickname: nickname ?? this.nickname,
@@ -72,7 +81,10 @@ class UserProfile {
       position: position ?? this.position,
       avatarPath: avatarPath ?? this.avatarPath,
       coverPath: coverPath ?? this.coverPath,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      coverUrl: coverUrl ?? this.coverUrl,
       contributions: contributions ?? this.contributions,
+      isLocked: isLocked ?? this.isLocked,
     );
   }
 }

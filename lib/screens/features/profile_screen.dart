@@ -8,8 +8,11 @@ import '../../services/database_helper.dart';
 import '../../models/user_profile.dart';
 import '../../models/center_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/storage_service.dart';
 import '../../widgets/expandable_text.dart';
 import '../../widgets/contributor_badge.dart';
+import '../../widgets/user_avatar.dart';
+import 'search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final bool showAppBar;
@@ -39,12 +42,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       // Self-healing check: Sync total contribution count if it differs from the document tracker
       final currentProfile = UserService.instance.value;
-      final validCount = items.where((item) => item['status'] != 'reported').length;
+      final validCount = items
+          .where((item) => item['status'] != 'reported')
+          .length;
       if (currentProfile.contributions != validCount) {
-        await FirestoreService().syncUserContributionsCount(
-          email,
-          validCount,
-        );
+        await FirestoreService().syncUserContributionsCount(email, validCount);
       }
 
       if (mounted) {
@@ -243,7 +245,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 85,
       );
 
       if (pickedFile == null) return;
@@ -254,6 +255,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final File savedImage = await File(
         pickedFile.path,
       ).copy('${appDir.path}/$fileName');
+
+      final email = UserService.instance.currentUser.email;
 
       if (isAvatar) {
         await UserService.instance.updateProfileImages(
@@ -274,6 +277,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
+      }
+
+      // Upload to Firebase Cloud Storage and sync with Firestore in background
+      if (isAvatar) {
+        StorageService.instance.uploadAvatar(savedImage, email);
+      } else {
+        StorageService.instance.uploadCover(savedImage, email);
       }
     } catch (e) {
       if (mounted) {
@@ -383,7 +393,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       appBar: widget.showAppBar
-          ? AppBar(title: const Text('Member Profile'), elevation: 0)
+          ? AppBar(
+              title: const Text('Member Profile'),
+              elevation: 0,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search_rounded),
+                  tooltip: 'Search',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const SearchScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+            )
           : null,
       body: ValueListenableBuilder<UserProfile>(
         valueListenable: UserService.instance,
@@ -391,21 +418,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final nickname = profile.nickname.isNotEmpty
               ? profile.nickname
               : 'Member';
+          final String middleInitial = profile.middleName.trim().isNotEmpty
+              ? '${profile.middleName.trim().substring(0, 1).toUpperCase()}.'
+              : '';
+          final String fullNameWithInitial =
+              (profile.firstName.trim().isNotEmpty ||
+                      profile.lastName.trim().isNotEmpty)
+                  ? [
+                      if (profile.firstName.trim().isNotEmpty)
+                        profile.firstName.trim(),
+                      if (middleInitial.isNotEmpty) middleInitial,
+                      if (profile.lastName.trim().isNotEmpty)
+                        profile.lastName.trim(),
+                    ].join(' ')
+                  : nickname;
           final district = profile.district.isNotEmpty
               ? (profile.district.startsWith('District')
-                  ? profile.district
-                  : 'District ${profile.district}')
+                    ? profile.district
+                    : 'District ${profile.district}')
               : '';
           final area = profile.area.isNotEmpty
               ? (profile.area.startsWith('Area')
-                  ? profile.area
-                  : 'Area ${profile.area}')
+                    ? profile.area
+                    : 'Area ${profile.area}')
               : '';
           final localCenter = profile.localCenter.isNotEmpty
               ? profile.localCenter
               : 'Local Center';
           final centerAddress = profile.centerAddress;
-          final initial = nickname.isNotEmpty ? nickname[0].toUpperCase() : 'M';
 
           return SingleChildScrollView(
             child: Column(
@@ -421,7 +461,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Hero(
                         tag: 'cover_hero',
                         child: Container(
-                          height: 120,
+                          height: 300,
                           width: double.infinity,
                           decoration: BoxDecoration(
                             gradient: profile.coverPath.isEmpty
@@ -499,7 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     // Overlapping Profile Avatar
                     Positioned(
-                      bottom: -40,
+                      bottom: -60,
                       left: 0,
                       right: 0,
                       child: Center(
@@ -508,13 +548,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: theme.scaffoldBackgroundColor,
-                              width: 4,
+                              width: 4.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
@@ -524,50 +564,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               children: [
                                 Hero(
                                   tag: 'avatar_hero',
-                                  child: CircleAvatar(
-                                    radius: 46,
+                                  child: UserAvatar(
+                                    authorName: fullNameWithInitial,
+                                    localAvatarPath: profile.avatarPath,
+                                    avatarUrl: profile.avatarUrl,
+                                    radius: 64,
                                     backgroundColor: isDark
                                         ? const Color(0xFF3A3B3C)
                                         : const Color(0xFFE4E6EB),
-                                    backgroundImage:
-                                        nickname.toLowerCase() !=
-                                                'devchristian' &&
-                                            profile.avatarPath.isNotEmpty
-                                        ? FileImage(File(profile.avatarPath))
-                                        : null,
-                                    child:
-                                        nickname.toLowerCase() == 'devchristian'
-                                        ? Padding(
-                                            padding: const EdgeInsets.all(6.0),
-                                            child: ClipOval(
-                                              child: Image.asset(
-                                                'assets/images/brand_mark.png',
-                                                fit: BoxFit.contain,
-                                              ),
-                                            ),
-                                          )
-                                        : (profile.avatarPath.isEmpty
-                                              ? Text(
-                                                  initial,
-                                                  style: TextStyle(
-                                                    fontSize: 36,
-                                                    fontWeight: FontWeight.bold,
-                                                    color:
-                                                        theme.colorScheme.primary,
-                                                  ),
-                                                )
-                                              : null),
+                                    textStyle: TextStyle(
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary,
+                                    ),
                                   ),
                                 ),
                                 Positioned(
-                                  bottom: 0,
-                                  right: 0,
+                                  bottom: 2,
+                                  right: 2,
                                   child: CircleAvatar(
-                                    radius: 13,
+                                    radius: 16,
                                     backgroundColor: theme.colorScheme.primary,
                                     child: const Icon(
                                       Icons.camera_alt_rounded,
-                                      size: 13,
+                                      size: 16,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -580,14 +600,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 50), // Spacer for overlapping avatar
+                const SizedBox(height: 70), // Spacer for overlapping avatar
                 // Profile Details Name & Badge Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Centered Nickname and badges
+                      // Centered Full Name and badges
                       Center(
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -595,7 +615,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Flexible(
                               child: Text(
-                                nickname,
+                                fullNameWithInitial,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 textAlign: TextAlign.center,
@@ -605,8 +625,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ),
-                            if (nickname.toLowerCase() ==
-                                'devchristian') ...[
+                            if (nickname.toLowerCase() == 'devchristian' ||
+                                fullNameWithInitial.toLowerCase().contains('christian')) ...[
                               const SizedBox(width: 6),
                               Icon(
                                 Icons.verified_rounded,
@@ -623,62 +643,182 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                       ),
-                      if (district.isNotEmpty ||
-                          area.isNotEmpty ||
-                          profile.position.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Center(
-                          child: Text(
-                            [
-                              if (district.isNotEmpty) district,
-                              if (area.isNotEmpty) area,
-                              if (profile.position.isNotEmpty) profile.position,
-                            ].join(' • '),
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.textTheme.bodySmall?.color,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
+                      // Centered contributions breakdown subtitle
+                      Builder(
+                        builder: (context) {
+                          final int postCount = _contributions
+                              .where((item) =>
+                                  (item['type'] ?? '')
+                                      .toString()
+                                      .toLowerCase()
+                                      .contains('post') &&
+                                  item['status'] != 'reported')
+                              .length;
+                          final int songCount = _contributions
+                              .where((item) =>
+                                  (item['type'] ?? '')
+                                      .toString()
+                                      .toLowerCase()
+                                      .contains('song') &&
+                                  item['status'] != 'reported')
+                              .length;
+                          final int centerCount = _contributions
+                              .where((item) =>
+                                  (item['type'] ?? '')
+                                      .toString()
+                                      .toLowerCase()
+                                      .contains('center') &&
+                                  item['status'] != 'reported')
+                              .length;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Center(
+                              child: Text.rich(
+                                TextSpan(
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.textTheme.bodySmall?.color,
+                                    fontWeight: FontWeight.normal,
+                                    fontSize: 13,
+                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: '$postCount',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: postCount == 1
+                                          ? ' post • '
+                                          : ' posts • ',
+                                    ),
+                                    TextSpan(
+                                      text: '$songCount',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: songCount == 1
+                                          ? ' song submitted • '
+                                          : ' songs submitted • ',
+                                    ),
+                                    TextSpan(
+                                      text: '$centerCount',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: theme.textTheme.bodyLarge?.color,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: centerCount == 1
+                                          ? ' center update'
+                                          : ' center updates',
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
+                          );
+                        },
+                      ),
                       const SizedBox(height: 20),
 
-                      // Facebook-style wide "Edit Profile" Action Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              _openEditProfilePage(context, profile),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('Edit Profile'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark
-                                ? const Color(0xFF3A3B3C)
-                                : const Color(0xFFE4E6EB),
-                            foregroundColor: isDark
-                                ? const Color(0xFFE4E6EB)
-                                : const Color(0xFF050505),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            textStyle: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                      // Row of "Edit Profile" and "Lock/Public Profile" Toggle Button
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 52,
+                              child: ElevatedButton.icon(
+                                onPressed: () =>
+                                    _openEditProfilePage(context, profile),
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                label: const Text('Edit Profile'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark
+                                      ? const Color(0xFF3A3B3C)
+                                      : const Color(0xFFE4E6EB),
+                                  foregroundColor: isDark
+                                      ? const Color(0xFFE4E6EB)
+                                      : const Color(0xFF050505),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 52,
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final newLockState = !profile.isLocked;
+                                await UserService.instance.updateProfileLock(
+                                  newLockState,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        newLockState
+                                            ? 'Profile locked for privacy'
+                                            : 'Profile is now public',
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                backgroundColor: isDark
+                                    ? const Color(0xFF3A3B3C)
+                                    : const Color(0xFFE4E6EB),
+                                foregroundColor: profile.isLocked
+                                    ? Colors.amber[700]
+                                    : theme.colorScheme.primary,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Tooltip(
+                                message: profile.isLocked
+                                    ? 'Locked Profile (Tap to make Public)'
+                                    : 'Public Profile (Tap to Lock)',
+                                child: Icon(
+                                  profile.isLocked
+                                      ? Icons.lock_rounded
+                                      : Icons.public_rounded,
+                                  size: 22,
+                                  color: profile.isLocked
+                                      ? Colors.amber[700]
+                                      : theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 24),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
-                      // Standard Grouped Card "Intro" Details section
+                      // Personal Details Section (Grouped Card List Style)
                       Text(
-                        'Intro',
+                        'Personal Details',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -686,28 +826,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 16),
                       Card(
                         color: theme.cardColor,
+                        clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                           side: BorderSide(color: theme.dividerColor),
                         ),
                         child: Column(
                           children: [
-                            ListTile(
-                              leading: const Icon(Icons.person_rounded),
-                              title: Text(
-                                '${profile.firstName} ${profile.middleName.isEmpty ? "" : "${profile.middleName} "}${profile.lastName}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            if (profile.nickname.isNotEmpty)
+                              ListTile(
+                                leading: const Icon(Icons.person_rounded),
+                                title: Text(
+                                  profile.nickname,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Nickname',
+                                  style: TextStyle(fontSize: 12),
                                 ),
                               ),
-                              subtitle: const Text(
-                                'Full Name',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
                             if (profile.memberId.isNotEmpty) ...[
-                              Divider(color: theme.dividerColor, height: 1),
+                              if (profile.nickname.isNotEmpty)
+                                Divider(color: theme.dividerColor, height: 1),
                               ListTile(
                                 leading: const Icon(Icons.badge_outlined),
                                 title: Text(
@@ -740,21 +883,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                             ],
-                            Divider(color: theme.dividerColor, height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.church_rounded),
-                              title: Text(
-                                localCenter,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            if (profile.position.isNotEmpty) ...[
+                              Divider(color: theme.dividerColor, height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.military_tech_outlined),
+                                title: Text(
+                                  profile.position,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Position / Role',
+                                  style: TextStyle(fontSize: 12),
                                 ),
                               ),
-                              subtitle: const Text(
-                                'Local Center',
-                                style: TextStyle(fontSize: 12),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Divider(color: theme.dividerColor, height: 1),
+                      const SizedBox(height: 20),
+
+                      // Dedicated "Center" Section (Grouped Card List Style)
+                      Text(
+                        'Center',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        color: theme.cardColor,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: theme.dividerColor),
+                        ),
+                        child: Column(
+                          children: [
+                            if (localCenter.isNotEmpty)
+                              ListTile(
+                                leading: const Icon(Icons.church_rounded),
+                                title: Text(
+                                  localCenter,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'Local Center',
+                                  style: TextStyle(fontSize: 12),
+                                ),
                               ),
-                            ),
+                            if (district.isNotEmpty || area.isNotEmpty) ...[
+                              if (localCenter.isNotEmpty)
+                                Divider(color: theme.dividerColor, height: 1),
+                              ListTile(
+                                leading: const Icon(Icons.map_rounded),
+                                title: Text(
+                                  [
+                                    if (district.isNotEmpty) district,
+                                    if (area.isNotEmpty) area,
+                                  ].join(' • '),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                subtitle: const Text(
+                                  'District & Area',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
                             if (centerAddress.isNotEmpty) ...[
                               Divider(color: theme.dividerColor, height: 1),
                               ListTile(
@@ -778,6 +983,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 24),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
+
                       // Contributions Section
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -874,9 +1080,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 type == 'Post' &&
                                 DateTime.now().difference(timestamp).inDays >=
                                     5;
-
-                            // Header initials helper
-                            final initials = initial;
 
                             // Type-specific body formatting
                             Widget bodyWidget;
@@ -1012,43 +1215,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       horizontal: 16,
                                       vertical: 8,
                                     ),
-                                    leading: CircleAvatar(
+                                    leading: UserAvatar(
+                                      authorName: fullNameWithInitial,
+                                      localAvatarPath: profile.avatarPath,
+                                      avatarUrl: profile.avatarUrl,
                                       radius: 20,
-                                      backgroundColor: theme.colorScheme.primary
-                                          .withValues(alpha: 0.1),
-                                      backgroundImage:
-                                          nickname.toLowerCase() !=
-                                                  'devchristian' &&
-                                              profile.avatarPath.isNotEmpty
-                                          ? FileImage(File(profile.avatarPath))
-                                          : null,
-                                      child:
-                                          nickname.toLowerCase() ==
-                                              'devchristian'
-                                          ? Padding(
-                                              padding: const EdgeInsets.all(
-                                                3.0,
-                                              ),
-                                              child: ClipOval(
-                                                child: Image.asset(
-                                                  'assets/images/brand_mark.png',
-                                                  fit: BoxFit.contain,
-                                                ),
-                                              ),
-                                            )
-                                          : (profile.avatarPath.isEmpty
-                                                ? Text(
-                                                    initials,
-                                                    style: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .primary,
-                                                    ),
-                                                  )
-                                                : null),
                                     ),
                                     title: Text(
                                       nickname,
@@ -1082,6 +1253,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             _formatDate(timestamp),
                                             style: theme.textTheme.bodySmall
                                                 ?.copyWith(fontSize: 11),
+                                          ),
+                                          Text(
+                                            '•',
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(fontSize: 11),
+                                          ),
+                                          Icon(
+                                            isExpiredPost
+                                                ? Icons.lock_outline_rounded
+                                                : Icons.public_rounded,
+                                            size: 12,
+                                            color: theme.textTheme.bodySmall?.color,
                                           ),
                                           if (status.isNotEmpty) ...[
                                             Text(
@@ -1185,8 +1368,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-
-
 }
 
 class EditProfileScreen extends StatefulWidget {
