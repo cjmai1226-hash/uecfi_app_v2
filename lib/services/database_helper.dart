@@ -174,6 +174,24 @@ class DatabaseHelper {
     }
   }
 
+  /// Get distinct books from ILODOR table with their total chapter count
+  static Future<List<Map<String, dynamic>>> getBibleBooksWithChapterCounts() async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        "SELECT book_id, book_name, MAX(chapter) as chapters_count FROM ILODOR GROUP BY book_id ORDER BY MIN(ROWID)",
+      );
+      return maps.map((m) => {
+        'book_id': m['book_id']?.toString() ?? '',
+        'book_name': m['book_name']?.toString() ?? '',
+        'chapters_count': m['chapters_count'] as int? ?? 1,
+      }).toList();
+    } catch (e) {
+      debugPrint('Error getting bible books with chapter counts: $e');
+      return [];
+    }
+  }
+
   /// Get number of chapters in a book
   static Future<int> getBibleChaptersCount(String bookId) async {
     try {
@@ -206,6 +224,24 @@ class DatabaseHelper {
     } catch (e) {
       debugPrint('Error getting bible verses: $e');
       return [];
+    }
+  }
+
+  /// Get number of verses in a book and chapter
+  static Future<int> getBibleVersesCount(String bookId, int chapter) async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.rawQuery(
+        "SELECT MAX(verse) as max_verse FROM ILODOR WHERE book_id = ? AND chapter = ?",
+        [bookId, chapter],
+      );
+      if (maps.isNotEmpty && maps.first['max_verse'] != null) {
+        return maps.first['max_verse'] as int;
+      }
+      return 0;
+    } catch (e) {
+      debugPrint('Error getting bible verses count: $e');
+      return 0;
     }
   }
 

@@ -1,7 +1,7 @@
 name: uecfi_app_v2
 description: "A new Flutter project for UECFI."
 publish_to: 'none'
-version: 2.1.3+43
+version: 2.1.5+46
 
 environment:
   sdk: ^3.11.5
@@ -25,6 +25,7 @@ dependencies:
   in_app_review: ^2.0.12
   firebase_storage: ^13.5.0
   cached_network_image: ^3.4.1
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -37,7 +38,36 @@ flutter:
   assets:
     - assets/db/uecfi.db
     - assets/images/
+    - assets/fonts/
+  fonts:
+    - family: Graphik
+      fonts:
+        - asset: assets/fonts/Graphik-Light-Trial.otf
+          weight: 300
+        - asset: assets/fonts/Graphik-Regular-Trial.otf
+          weight: 400
+        - asset: assets/fonts/Graphik-RegularItalic-Trial.otf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Graphik-Medium-Trial.otf
+          weight: 500
+        - asset: assets/fonts/Graphik-MediumItalic-Trial.otf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Graphik-Semibold-Trial.otf
+          weight: 600
+        - asset: assets/fonts/Graphik-SemiboldItalic-Trial.otf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Graphik-Bold-Trial.otf
+          weight: 700
+        - asset: assets/fonts/Graphik-BoldItalic-Trial.otf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Graphik-Black-Trial.otf
+          weight: 900
 
 flutter_launcher_icons:
   android: true
   image_path: "assets/images/image.png"
+

@@ -35,14 +35,6 @@ class _BylawsScreenState extends State<BylawsScreen> {
     }
   }
 
-  /// Truncate long content string for preview display
-  String _getContentPreview(String content) {
-    if (content.trim().isEmpty) return 'No preview available.';
-    final cleanText = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (cleanText.length <= 100) return cleanText;
-    return '${cleanText.substring(0, 100)}...';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -87,61 +79,85 @@ class _BylawsScreenState extends State<BylawsScreen> {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => BylawDetailScreen(
-                                bylaws: _bylaws,
-                                initialIndex: index,
+                                bylaw: bylaw,
                               ),
                             ),
                           );
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      bylaw.title.isNotEmpty ? bylaw.title : 'Untitled Article',
-                                      style: theme.textTheme.titleMedium?.copyWith(
-                                        fontSize: 16,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Chapter Badge
+                                    if (bylaw.chapters != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.primary
+                                              .withValues(alpha: 0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: theme.colorScheme.primary
+                                                .withValues(alpha: 0.25),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Chapter ${bylaw.chapters}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                    ],
+
+                                    // Bylaw Title
+                                    Text(
+                                      bylaw.title.isNotEmpty
+                                          ? bylaw.title
+                                          : 'Untitled Article',
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ),
-                                  if (bylaw.chapters != null) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: theme.colorScheme.primary.withValues(alpha: 0.25),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        'CH.${bylaw.chapters}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: theme.colorScheme.primary,
-                                        ),
+                                    const SizedBox(height: 4),
+
+                                    // Article Snippet (1 Maxline)
+                                    Text(
+                                      bylaw.content
+                                          .replaceAll(RegExp(r'\s+'), ' ')
+                                          .trim(),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        fontSize: 13,
+                                        color: theme.textTheme.bodySmall?.color,
                                       ),
                                     ),
                                   ],
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Content Preview
-                              Text(
-                                _getContentPreview(bylaw.content),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  height: 1.4,
-                                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
                                 ),
+                              ),
+                              const SizedBox(width: 10),
+
+                              // Trailing Chevron Icon
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                color: theme.hintColor,
+                                size: 22,
                               ),
                             ],
                           ),

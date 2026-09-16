@@ -37,16 +37,30 @@ class UserProfile {
     this.isLocked = false,
   });
 
-  bool get isComplete =>
-      nickname.isNotEmpty &&
-      firstName.isNotEmpty &&
-      lastName.isNotEmpty &&
-      district.isNotEmpty &&
-      area.isNotEmpty &&
-      localCenter.isNotEmpty &&
-      memberId.isNotEmpty &&
-      email.isNotEmpty &&
-      position.isNotEmpty;
+  bool get isProperlyOnboarded {
+    final n = nickname.trim();
+    final f = firstName.trim();
+    final l = lastName.trim();
+    final d = district.trim();
+    final a = area.trim();
+    final c = localCenter.trim();
+    final e = email.trim();
+
+    return n.isNotEmpty &&
+        f.isNotEmpty &&
+        l.isNotEmpty &&
+        d.isNotEmpty &&
+        d.toLowerCase() != 'default district' &&
+        a.isNotEmpty &&
+        a.toLowerCase() != 'default area' &&
+        c.isNotEmpty &&
+        c.toUpperCase() != 'MAIN CENTER' &&
+        memberId.trim().isNotEmpty &&
+        e.isNotEmpty &&
+        e.contains('@');
+  }
+
+  bool get isComplete => isProperlyOnboarded;
 
   UserProfile copyWith({
     String? nickname,

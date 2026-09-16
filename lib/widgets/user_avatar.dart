@@ -7,6 +7,7 @@ class UserAvatar extends StatelessWidget {
   final String? localAvatarPath;
   final String? avatarUrl;
   final double radius;
+  final BorderRadius? borderRadius;
   final Color? backgroundColor;
   final TextStyle? textStyle;
 
@@ -16,6 +17,7 @@ class UserAvatar extends StatelessWidget {
     this.localAvatarPath,
     this.avatarUrl,
     this.radius = 20.0,
+    this.borderRadius,
     this.backgroundColor,
     this.textStyle,
   });
@@ -23,6 +25,8 @@ class UserAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = radius * 2;
+    final r = borderRadius ?? BorderRadius.circular(radius * 0.45);
     final initial = authorName.trim().isNotEmpty
         ? authorName.trim()[0].toUpperCase()
         : 'M';
@@ -31,25 +35,47 @@ class UserAvatar extends StatelessWidget {
     if (localAvatarPath != null &&
         localAvatarPath!.isNotEmpty &&
         File(localAvatarPath!).existsSync()) {
-      return CircleAvatar(
-        radius: radius,
-        backgroundColor: backgroundColor ?? Colors.transparent,
-        backgroundImage: FileImage(File(localAvatarPath!)),
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? Colors.transparent,
+          borderRadius: r,
+          image: DecorationImage(
+            image: FileImage(File(localAvatarPath!)),
+            fit: BoxFit.cover,
+          ),
+        ),
       );
     }
 
     // 2. Network Cached Avatar (from Firebase Cloud Storage)
-    if (avatarUrl != null && avatarUrl!.trim().isNotEmpty && avatarUrl!.startsWith('http')) {
+    if (avatarUrl != null &&
+        avatarUrl!.trim().isNotEmpty &&
+        avatarUrl!.startsWith('http')) {
       return CachedNetworkImage(
         imageUrl: avatarUrl!.trim(),
-        imageBuilder: (context, imageProvider) => CircleAvatar(
-          radius: radius,
-          backgroundColor: backgroundColor ?? Colors.transparent,
-          backgroundImage: imageProvider,
+        imageBuilder: (context, imageProvider) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: backgroundColor ?? Colors.transparent,
+            borderRadius: r,
+            image: DecorationImage(
+              image: imageProvider,
+              fit: BoxFit.cover,
+            ),
+          ),
         ),
-        placeholder: (context, url) => CircleAvatar(
-          radius: radius,
-          backgroundColor: backgroundColor ?? theme.colorScheme.primary.withValues(alpha: 0.15),
+        placeholder: (context, url) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: backgroundColor ??
+                theme.colorScheme.primary.withValues(alpha: 0.15),
+            borderRadius: r,
+          ),
+          alignment: Alignment.center,
           child: Text(
             initial,
             style: textStyle ??
@@ -60,9 +86,14 @@ class UserAvatar extends StatelessWidget {
                 ),
           ),
         ),
-        errorWidget: (context, url, error) => CircleAvatar(
-          radius: radius,
-          backgroundColor: backgroundColor ?? theme.colorScheme.primary,
+        errorWidget: (context, url, error) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: backgroundColor ?? theme.colorScheme.primary,
+            borderRadius: r,
+          ),
+          alignment: Alignment.center,
           child: Text(
             initial,
             style: textStyle ??
@@ -77,9 +108,14 @@ class UserAvatar extends StatelessWidget {
     }
 
     // 3. Default Initial Letter Avatar
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: backgroundColor ?? theme.colorScheme.primary,
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor ?? theme.colorScheme.primary,
+        borderRadius: r,
+      ),
+      alignment: Alignment.center,
       child: Text(
         initial,
         style: textStyle ??

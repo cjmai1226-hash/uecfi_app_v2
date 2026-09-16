@@ -33,12 +33,12 @@ class UecfiLogo extends StatelessWidget {
           const SizedBox(width: 8),
         ],
         Text(
-          'espiritista',
+          'UECFI',
           style: TextStyle(
             fontSize: fontSize,
             fontWeight: FontWeight.w900,
-            letterSpacing: 0.5,
-            color: isDark ? Colors.white : const Color(0xFF111111),
+            letterSpacing: 1.0,
+            color: isDark ? Colors.white : theme.colorScheme.primary,
           ),
         ),
       ],

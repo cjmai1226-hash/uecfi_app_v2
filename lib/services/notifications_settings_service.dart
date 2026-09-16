@@ -39,11 +39,13 @@ class NotificationsSettingsService extends ValueNotifier<bool> {
       await NotificationService().scheduleDailyPrayerReminder();
       await NotificationService().scheduleSundayReminder();
       await NotificationService().scheduleMorningReminder();
+      NotificationService().startListeningToNewCommunityPosts();
     } else {
       // Cancel all reminders
       await NotificationService().cancelDailyPrayerReminder();
       await NotificationService().cancelSundayReminder();
       await NotificationService().cancelMorningReminder();
+      NotificationService().stopListeningToNewCommunityPosts();
     }
   }
 }

@@ -283,13 +283,10 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     } else if (item.type == SearchResultType.bylaw) {
       final targetBylaw = item.data as BylawModel;
-      final matchedBylaws = _searchResults.where((r) => r.type == SearchResultType.bylaw).map((r) => r.data as BylawModel).toList();
-      final idx = matchedBylaws.indexOf(targetBylaw);
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => BylawDetailScreen(
-            bylaws: matchedBylaws.isNotEmpty ? matchedBylaws : _allBylaws,
-            initialIndex: idx >= 0 ? idx : 0,
+            bylaw: targetBylaw,
           ),
         ),
       );
@@ -308,66 +305,84 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 8,
-        title: Container(
-          height: 40,
-          decoration: BoxDecoration(
-            color: theme.brightness == Brightness.dark
-                ? const Color(0xFF3A3B3C)
-                : const Color(0xFFE4E6EB),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            children: [
-              Icon(
-                Icons.search_rounded,
-                size: 20,
-                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  onChanged: _performSearch,
-                  onSubmitted: (val) {
-                    if (val.trim().isNotEmpty) {
-                      _addRecentSearch(val);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search songs, prayers, bylaws, centers...',
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    isDense: true,
-                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  style: theme.textTheme.bodyLarge,
-                ),
-              ),
-              if (_searchController.text.isNotEmpty)
-                GestureDetector(
-                  onTap: () {
-                    _searchController.clear();
-                    _performSearch('');
-                  },
-                  child: Icon(
-                    Icons.clear_rounded,
-                    size: 18,
-                    color: theme.textTheme.bodySmall?.color,
-                  ),
-                ),
-            ],
-          ),
+        centerTitle: true,
+        title: Image.asset(
+          'assets/images/brand_mark.png',
+          height: 32,
+          width: 32,
+          fit: BoxFit.contain,
         ),
       ),
       body: Column(
         children: [
+          // Search Input Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+            child: Container(
+              height: 46,
+              decoration: BoxDecoration(
+                color: theme.brightness == Brightness.dark
+                    ? const Color(0xFF1E1E2A)
+                    : const Color(0xFFEEEEF4),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: theme.dividerColor.withValues(alpha: 0.6),
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      autofocus: true,
+                      onChanged: _performSearch,
+                      onSubmitted: (val) {
+                        if (val.trim().isNotEmpty) {
+                          _addRecentSearch(val);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search songs, prayers, bylaws, centers...',
+                        filled: false,
+                        hoverColor: Colors.transparent,
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                        hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.textTheme.bodySmall?.color
+                              ?.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ),
+                  if (_searchController.text.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        _searchController.clear();
+                        _performSearch('');
+                      },
+                      child: Icon(
+                        Icons.clear_rounded,
+                        size: 18,
+                        color: theme.textTheme.bodySmall?.color,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
           // Category Filter Chips Row
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -656,7 +671,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   item.subtitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     height: 1.4,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+                    color: theme.textTheme.bodySmall?.color,
                   ),
                 ),
               ],

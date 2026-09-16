@@ -10,8 +10,15 @@ import '../../widgets/user_avatar.dart';
 
 class CreatePostScreen extends StatefulWidget {
   final BlogPost? postToEdit;
+  final String? initialContent;
+  final String? initialGradientId;
 
-  const CreatePostScreen({super.key, this.postToEdit});
+  const CreatePostScreen({
+    super.key,
+    this.postToEdit,
+    this.initialContent,
+    this.initialGradientId,
+  });
 
   @override
   State<CreatePostScreen> createState() => _CreatePostScreenState();
@@ -25,8 +32,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.postToEdit?.content ?? '');
-    _selectedGradientId = widget.postToEdit?.bgGradient;
+    _controller = TextEditingController(
+      text: widget.postToEdit?.content ?? widget.initialContent ?? '',
+    );
+    _selectedGradientId =
+        widget.postToEdit?.bgGradient ?? widget.initialGradientId;
     _controller.addListener(() {
       setState(() {});
     });
@@ -37,6 +47,160 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _formatBold() {
+    final text = _controller.text;
+    final selection = _controller.selection;
+
+    if (selection.isValid && !selection.isCollapsed) {
+      final selectedText = text.substring(selection.start, selection.end);
+      final newText =
+          text.replaceRange(selection.start, selection.end, '**$selectedText**');
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(
+          baseOffset: selection.start + 2,
+          extentOffset: selection.end + 2,
+        ),
+      );
+    } else {
+      final cursor = selection.isValid ? selection.start : text.length;
+      const placeholder = 'bold text';
+      final newText = text.replaceRange(cursor, cursor, '**$placeholder**');
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(
+          baseOffset: cursor + 2,
+          extentOffset: cursor + 2 + placeholder.length,
+        ),
+      );
+    }
+    _focusNode.requestFocus();
+  }
+
+  void _formatItalic() {
+    final text = _controller.text;
+    final selection = _controller.selection;
+
+    if (selection.isValid && !selection.isCollapsed) {
+      final selectedText = text.substring(selection.start, selection.end);
+      final newText =
+          text.replaceRange(selection.start, selection.end, '*$selectedText*');
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(
+          baseOffset: selection.start + 1,
+          extentOffset: selection.end + 1,
+        ),
+      );
+    } else {
+      final cursor = selection.isValid ? selection.start : text.length;
+      const placeholder = 'italic text';
+      final newText = text.replaceRange(cursor, cursor, '*$placeholder*');
+      _controller.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection(
+          baseOffset: cursor + 1,
+          extentOffset: cursor + 1 + placeholder.length,
+        ),
+      );
+    }
+    _focusNode.requestFocus();
+  }
+
+  void _formatBullet() {
+    final text = _controller.text;
+    final selection = _controller.selection;
+    final cursor = selection.isValid ? selection.start : text.length;
+
+    String insertText = '• ';
+    if (cursor > 0 && text[cursor - 1] != '\n') {
+      insertText = '\n• ';
+    }
+
+    final newText = text.replaceRange(
+      cursor,
+      selection.isValid ? selection.end : cursor,
+      insertText,
+    );
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + insertText.length),
+    );
+    _focusNode.requestFocus();
+  }
+
+  void _formatNumbered() {
+    final text = _controller.text;
+    final selection = _controller.selection;
+    final cursor = selection.isValid ? selection.start : text.length;
+
+    int nextNumber = 1;
+    if (cursor > 0) {
+      final textBefore = text.substring(0, cursor);
+      final lines = textBefore.split('\n');
+      if (lines.isNotEmpty) {
+        final lastLine = lines.last.trim();
+        final match = RegExp(r'^(\d+)\.').firstMatch(lastLine);
+        if (match != null) {
+          nextNumber = (int.tryParse(match.group(1)!) ?? 0) + 1;
+        } else if (lines.length > 1) {
+          final prevLine = lines[lines.length - 2].trim();
+          final matchPrev = RegExp(r'^(\d+)\.').firstMatch(prevLine);
+          if (matchPrev != null) {
+            nextNumber = (int.tryParse(matchPrev.group(1)!) ?? 0) + 1;
+          }
+        }
+      }
+    }
+
+    String insertText = '$nextNumber. ';
+    if (cursor > 0 && text[cursor - 1] != '\n') {
+      insertText = '\n$nextNumber. ';
+    }
+
+    final newText = text.replaceRange(
+      cursor,
+      selection.isValid ? selection.end : cursor,
+      insertText,
+    );
+    _controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: cursor + insertText.length),
+    );
+    _focusNode.requestFocus();
+  }
+
+  Widget _buildFormatButton({
+    required BuildContext context,
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: theme.textTheme.bodyLarge?.color,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _submitPost(UserProfile profile) async {
@@ -202,7 +366,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(widget.postToEdit != null ? 'Edit Post' : 'Create Post'),
+            title: Text(
+              widget.postToEdit != null ? 'Edit Post' : 'Create Post',
+            ),
             actions: [
               TextButton(
                 onPressed: hasPostContent
@@ -220,7 +386,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                     color: hasPostContent
-                        ? (isDark ? theme.colorScheme.primary : const Color(0xFF1877F2))
+                        ? theme.colorScheme.primary
                         : theme.disabledColor,
                   ),
                 ),
@@ -385,6 +551,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         maxLines: null,
                         minLines: 6,
                         keyboardType: TextInputType.multiline,
+                        style: TextStyle(
+                          color: theme.textTheme.bodyLarge?.color,
+                          fontSize: 15.5,
+                          height: 1.5,
+                        ),
                         decoration: InputDecoration(
                           hintText: widget.postToEdit != null
                               ? "Edit your post..."
@@ -394,6 +565,78 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       );
                     },
                   ),
+                ),
+              ),
+
+              // Post Text Formatting Toolbar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  border: Border(
+                    top: BorderSide(color: theme.dividerColor, width: 1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    _buildFormatButton(
+                      context: context,
+                      icon: Icons.format_bold_rounded,
+                      tooltip: 'Bold (**text**)',
+                      onPressed: _formatBold,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildFormatButton(
+                      context: context,
+                      icon: Icons.format_italic_rounded,
+                      tooltip: 'Italic (*text*)',
+                      onPressed: _formatItalic,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildFormatButton(
+                      context: context,
+                      icon: Icons.format_list_bulleted_rounded,
+                      tooltip: 'Bullet List',
+                      onPressed: _formatBullet,
+                    ),
+                    const SizedBox(width: 4),
+                    _buildFormatButton(
+                      context: context,
+                      icon: Icons.format_list_numbered_rounded,
+                      tooltip: 'Numbered List',
+                      onPressed: _formatNumbered,
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 12,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Markdown',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
 

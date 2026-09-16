@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../widgets/uecfi_logo.dart';
 import '../../widgets/sparkling_trophy_icon.dart';
 import 'home_screen.dart';
 import '../features/prayers_screen.dart';
@@ -9,6 +8,8 @@ import '../features/leaderboard_screen.dart';
 import '../features/menu_screen.dart';
 import '../features/search_screen.dart';
 import '../../services/ad_service.dart';
+import '../../services/user_service.dart';
+import 'onboarding_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -17,7 +18,8 @@ class MainNavigationScreen extends StatefulWidget {
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> with SingleTickerProviderStateMixin {
+class _MainNavigationScreenState extends State<MainNavigationScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   final List<Widget> _screens = const [
@@ -33,6 +35,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !UserService.instance.value.isProperlyOnboarded) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          (route) => false,
+        );
+      }
+    });
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       // Rebuild to update selected tab icon states (filled vs outlined)
@@ -52,14 +62,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
     super.dispose();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const UecfiLogo(
-          fontSize: 18,
+        leading: IconButton(
+          icon: const Icon(Icons.menu_rounded),
+          tooltip: 'Menu',
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const MenuScreen(showAppBar: true),
+              ),
+            );
+          },
+        ),
+        title: const Text(
+          'uecfi app',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 21,
+            letterSpacing: -0.3,
+          ),
         ),
         centerTitle: false,
         actions: [
@@ -69,26 +93,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
             tooltip: 'Search',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SearchScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
               );
             },
           ),
-
-          // Menu Icon Button routing to Menu Screen Page
-          IconButton(
-            icon: const Icon(Icons.menu_rounded),
-            tooltip: 'Menu',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const MenuScreen(showAppBar: true),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -122,19 +131,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> with Single
               ),
             ),
             Tab(
-              icon: SparklingTrophyIcon(
-                isSelected: _tabController.index == 4,
-              ),
+              icon: SparklingTrophyIcon(isSelected: _tabController.index == 4),
             ),
           ],
         ),
       ),
       body: SafeArea(
         top: false,
-        child: TabBarView(
-          controller: _tabController,
-          children: _screens,
-        ),
+        child: TabBarView(controller: _tabController, children: _screens),
       ),
     );
   }

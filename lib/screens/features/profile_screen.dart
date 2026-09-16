@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 import '../../services/database_helper.dart';
 import '../../models/user_profile.dart';
@@ -12,6 +13,7 @@ import '../../services/storage_service.dart';
 import '../../widgets/expandable_text.dart';
 import '../../widgets/contributor_badge.dart';
 import '../../widgets/user_avatar.dart';
+import '../details/center_detail_screen.dart';
 import 'search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -26,6 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Map<String, dynamic>> _contributions = [];
   bool _isLoadingContributions = true;
   int _visibleCount = 10;
+  String _selectedContributionCategory = 'Posts';
 
   @override
   void initState() {
@@ -136,47 +139,395 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Map<String, dynamic> item,
   ) {
     final theme = Theme.of(context);
+
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Contribution Options',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: Colors.redAccent,
-                ),
-                title: const Text(
-                  'Delete Contribution',
-                  style: TextStyle(
-                    color: Colors.redAccent,
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Contribution Options',
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(context); // Close bottom sheet
-                  _confirmDeleteContribution(item);
-                },
-              ),
-            ],
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    'Delete Contribution',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context); // Close bottom sheet
+                    _confirmDeleteContribution(item);
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  void _showSongSubmissionDetailsSheet(
+    BuildContext context,
+    Map<String, dynamic> item,
+    ThemeData theme,
+    bool isDark,
+  ) {
+    final title = item['title'] ?? 'Untitled Song';
+    final author = (item['author'] as String?)?.isNotEmpty == true ? item['author'] : 'Unknown';
+    final category = item['category'] ?? 'Worship';
+    final chords = item['chords'] as String? ?? '';
+    final lyrics = item['lyrics'] as String? ?? '';
+    final status = (item['status'] ?? 'pending').toString().toLowerCase();
+    final dateStr = _formatDate(item['timestamp'] as DateTime);
+    final statusColor = status == 'approved'
+        ? Colors.green
+        : (status == 'rejected' ? Colors.red : Colors.orange);
+    final statusLabel = status == 'approved'
+        ? 'Approved'
+        : (status == 'rejected' ? 'Rejected' : 'Pending Review');
+    final statusIcon = status == 'approved'
+        ? Icons.check_circle_rounded
+        : (status == 'rejected' ? Icons.cancel_rounded : Icons.schedule_rounded);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
+            expand: false,
+            builder: (context, scrollController) {
+              return Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Submitted Song Details',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: theme.dividerColor, height: 1),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'By $author',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontStyle: FontStyle.italic,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(statusIcon, size: 16, color: statusColor),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    statusLabel,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            if (category.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF3A3B3C)
+                                      : const Color(0xFFE4E6EB),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  category,
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? const Color(0xFF3A3B3C)
+                                    : const Color(0xFFE4E6EB),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                dateStr,
+                                style: TextStyle(
+                                  color: theme.textTheme.bodySmall?.color,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (chords.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          Divider(color: theme.dividerColor, height: 1),
+                          const SizedBox(height: 20),
+                          Text(
+                            'CHORDS',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.8,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF242526)
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: SelectableText(
+                              chords,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 13,
+                                color: theme.textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (lyrics.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          if (chords.isEmpty)
+                            Divider(color: theme.dividerColor, height: 1),
+                          const SizedBox(height: 20),
+                          Text(
+                            'LYRICS',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.8,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF242526)
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: SelectableText(
+                              lyrics,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                height: 1.6,
+                                color: theme.textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContributionFilterChip({
+    required String label,
+    required String categoryKey,
+    required int count,
+    required ThemeData theme,
+    required bool isDark,
+  }) {
+    final isSelected = _selectedContributionCategory == categoryKey;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _selectedContributionCategory = categoryKey;
+            _visibleCount = 10;
+          });
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : (isDark ? const Color(0xFF242526) : const Color(0xFFE4E6EB)),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : (isDark
+                        ? Colors.white10
+                        : Colors.black.withValues(alpha: 0.05)),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark
+                            ? const Color(0xFFE4E6EB)
+                            : const Color(0xFF0E0E14)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : (isDark
+                            ? const Color(0xFF3A3B3C)
+                            : const Color(0xFFD8DADF)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? Colors.white
+                        : (isDark
+                              ? const Color(0xFFB0B3B8)
+                              : const Color(0xFF65676B)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -304,54 +655,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         final theme = Theme.of(context);
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isAvatar ? 'Profile Photo' : 'Cover Photo',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isAvatar ? 'Profile Photo' : 'Cover Photo',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (hasPhoto)
+                const SizedBox(height: 16),
+                if (hasPhoto)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.visibility_rounded,
+                      color: theme.brightness == Brightness.dark
+                          ? Colors.white70
+                          : Colors.black87,
+                    ),
+                    title: const Text('View Photo'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _viewPhotoFullScreen(isAvatar, imagePath);
+                    },
+                  ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(
-                    Icons.visibility_rounded,
+                    Icons.photo_library_rounded,
                     color: theme.brightness == Brightness.dark
                         ? Colors.white70
                         : Colors.black87,
                   ),
-                  title: const Text('View Photo'),
+                  title: Text(hasPhoto ? 'Change Photo' : 'Upload Photo'),
                   onTap: () {
                     Navigator.pop(context);
-                    _viewPhotoFullScreen(isAvatar, imagePath);
+                    _pickImage(isAvatar);
                   },
                 ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  Icons.photo_library_rounded,
-                  color: theme.brightness == Brightness.dark
-                      ? Colors.white70
-                      : Colors.black87,
-                ),
-                title: Text(hasPhoto ? 'Change Photo' : 'Upload Photo'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(isAvatar);
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -383,6 +738,239 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _openCenterDetail(
+    BuildContext context,
+    String centerName,
+    String centerAddress,
+  ) async {
+    try {
+      final allCenters = await DatabaseHelper.getAllCenters();
+      final match = allCenters.firstWhere(
+        (c) => c.name.trim().toLowerCase() == centerName.trim().toLowerCase(),
+        orElse: () => CenterModel(
+          name: centerName,
+          address: centerAddress,
+          district: '',
+          area: '',
+          location: '',
+          contact: '',
+          status: 'Active',
+          history: '',
+          page: '',
+        ),
+      );
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CenterDetailScreen(center: match),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error opening center detail: $e');
+    }
+  }
+
+  String _extractShortAddress(String rawAddress) {
+    final clean = rawAddress.trim();
+    if (clean.isEmpty) return 'Center';
+    final parts = clean.split(',');
+    if (parts.isNotEmpty && parts.first.trim().isNotEmpty) {
+      return parts.first.trim();
+    }
+    return clean;
+  }
+
+  void _showAllVisitedCentersSheet(
+    BuildContext context, {
+    required List<Map<String, dynamic>> visits,
+    required String memberName,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (context, scrollController) {
+            return SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  // Top Drag Handle Pill
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Visited Centers',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${visits.length}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: theme.dividerColor, height: 1),
+
+                  // List of Centers
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      itemCount: visits.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final visit = visits[index];
+                        final centerName =
+                            (visit['centerName'] as String?)?.trim() ??
+                                'Worship Center';
+                        final centerAddress =
+                            (visit['centerAddress'] as String?)?.trim() ?? '';
+                        final dynamic timestamp = visit['visitedAt'];
+                        String dateStr = '';
+                        if (timestamp is Timestamp) {
+                          final dt = timestamp.toDate();
+                          final months = [
+                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                          ];
+                          dateStr =
+                              'Visited on ${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+                        }
+
+                        return Card(
+                          margin: EdgeInsets.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(
+                              color: theme.dividerColor.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: theme.colorScheme.primary
+                                  .withValues(alpha: 0.1),
+                              child: Icon(
+                                Icons.place_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              centerName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: (centerAddress.isNotEmpty ||
+                                    dateStr.isNotEmpty)
+                                ? Text(
+                                    [
+                                      if (centerAddress.isNotEmpty)
+                                        centerAddress,
+                                      if (dateStr.isNotEmpty) dateStr,
+                                    ].join(' • '),
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : null,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                            ),
+                            onTap: () {
+                              Navigator.of(sheetContext).pop();
+                              _openCenterDetail(
+                                context,
+                                centerName,
+                                centerAddress,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -483,57 +1071,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   )
                                 : null,
                           ),
-                          child: profile.coverPath.isEmpty
-                              ? Center(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.3,
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.camera_alt_rounded,
-                                          size: 14,
-                                          color: Colors.white,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Text(
-                                          'Add Cover Photo',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                              : Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: CircleAvatar(
-                                      radius: 14,
-                                      backgroundColor: Colors.black.withValues(
-                                        alpha: 0.6,
-                                      ),
-                                      child: const Icon(
-                                        Icons.camera_alt_rounded,
-                                        size: 14,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
                         ),
                       ),
                     ),
@@ -545,7 +1082,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       child: Center(
                         child: Container(
                           decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                            borderRadius: BorderRadius.circular(32),
                             border: Border.all(
                               color: theme.scaffoldBackgroundColor,
                               width: 4.5,
@@ -560,39 +1097,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: GestureDetector(
                             onTap: () => _handlePhotoTap(true, profile),
-                            child: Stack(
-                              children: [
-                                Hero(
-                                  tag: 'avatar_hero',
-                                  child: UserAvatar(
-                                    authorName: fullNameWithInitial,
-                                    localAvatarPath: profile.avatarPath,
-                                    avatarUrl: profile.avatarUrl,
-                                    radius: 64,
-                                    backgroundColor: isDark
-                                        ? const Color(0xFF3A3B3C)
-                                        : const Color(0xFFE4E6EB),
-                                    textStyle: TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.primary,
-                                    ),
-                                  ),
+                            child: Hero(
+                              tag: 'avatar_hero',
+                              child: UserAvatar(
+                                authorName: fullNameWithInitial,
+                                localAvatarPath: profile.avatarPath,
+                                avatarUrl: profile.avatarUrl,
+                                radius: 64,
+                                borderRadius: BorderRadius.circular(28),
+                                backgroundColor: isDark
+                                    ? const Color(0xFF3A3B3C)
+                                    : const Color(0xFFE4E6EB),
+                                textStyle: TextStyle(
+                                  fontSize: 48,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
                                 ),
-                                Positioned(
-                                  bottom: 2,
-                                  right: 2,
-                                  child: CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: theme.colorScheme.primary,
-                                    child: const Icon(
-                                      Icons.camera_alt_rounded,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
@@ -816,171 +1337,366 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
-                      // Personal Details Section (Grouped Card List Style)
+                      // Personal Details Section
                       Text(
-                        'Personal Details',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        'PERSONAL DETAILS',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11.5,
+                          letterSpacing: 0.8,
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Card(
-                        color: theme.cardColor,
-                        clipBehavior: Clip.antiAlias,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: theme.dividerColor),
+                      const SizedBox(height: 6),
+                      if (profile.nickname.isNotEmpty)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          title: Text(
+                            profile.nickname,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Nickname',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
                         ),
-                        child: Column(
-                          children: [
-                            if (profile.nickname.isNotEmpty)
-                              ListTile(
-                                leading: const Icon(Icons.person_rounded),
-                                title: Text(
-                                  profile.nickname,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Nickname',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            if (profile.memberId.isNotEmpty) ...[
-                              if (profile.nickname.isNotEmpty)
-                                Divider(color: theme.dividerColor, height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.badge_outlined),
-                                title: Text(
-                                  profile.memberId,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Member ID',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                            if (profile.email.isNotEmpty) ...[
-                              Divider(color: theme.dividerColor, height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.email_outlined),
-                                title: Text(
-                                  profile.email,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Email',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                            if (profile.position.isNotEmpty) ...[
-                              Divider(color: theme.dividerColor, height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.military_tech_outlined),
-                                title: Text(
-                                  profile.position,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Position / Role',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ],
+                      if (profile.email.isNotEmpty)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          title: Text(
+                            profile.email,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Email',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
+                      if (profile.position.isNotEmpty)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          title: Text(
+                            profile.position,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Position / Role',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
-                      // Dedicated "Center" Section (Grouped Card List Style)
+                      // Dedicated "Center" Section
                       Text(
-                        'Center',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                        'CENTER',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11.5,
+                          letterSpacing: 0.8,
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Card(
-                        color: theme.cardColor,
-                        clipBehavior: Clip.antiAlias,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: theme.dividerColor),
+                      const SizedBox(height: 6),
+                      if (localCenter.isNotEmpty)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          title: Text(
+                            localCenter,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Local Center',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
                         ),
-                        child: Column(
-                          children: [
-                            if (localCenter.isNotEmpty)
-                              ListTile(
-                                leading: const Icon(Icons.church_rounded),
-                                title: Text(
-                                  localCenter,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Local Center',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            if (district.isNotEmpty || area.isNotEmpty) ...[
-                              if (localCenter.isNotEmpty)
-                                Divider(color: theme.dividerColor, height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.map_rounded),
-                                title: Text(
-                                  [
-                                    if (district.isNotEmpty) district,
-                                    if (area.isNotEmpty) area,
-                                  ].join(' • '),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'District & Area',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                            if (centerAddress.isNotEmpty) ...[
-                              Divider(color: theme.dividerColor, height: 1),
-                              ListTile(
-                                leading: const Icon(Icons.place_rounded),
-                                title: Text(
-                                  centerAddress,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                subtitle: const Text(
-                                  'Worships at',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ],
+                      if (district.isNotEmpty || area.isNotEmpty)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          title: Text(
+                            [
+                              if (district.isNotEmpty) district,
+                              if (area.isNotEmpty) area,
+                            ].join(' • '),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'District & Area',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
                         ),
+                      if (centerAddress.isNotEmpty)
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 2,
+                          ),
+                          title: Text(
+                            centerAddress,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Worships at',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+
+                      // Visited Centers Subsection
+                      StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: FirestoreService()
+                            .streamUserVisitedCenters(profile.email),
+                        builder: (context, snapshot) {
+                          final visits = snapshot.data ?? [];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'VISITED CENTERS',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 11.5,
+                                            letterSpacing: 0.8,
+                                            color: theme
+                                                .textTheme.bodySmall?.color,
+                                          ),
+                                        ),
+                                        if (visits.isNotEmpty) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              '${visits.length}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    theme.colorScheme.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    if (visits.length > 3)
+                                      InkWell(
+                                        borderRadius: BorderRadius.circular(8),
+                                        onTap: () =>
+                                            _showAllVisitedCentersSheet(
+                                          context,
+                                          visits: visits,
+                                          memberName: profile.nickname.isNotEmpty
+                                              ? profile.nickname
+                                              : 'Member',
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 2,
+                                          ),
+                                          child: Text(
+                                            'View All',
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: theme.colorScheme.primary,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (visits.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 4,
+                                  ),
+                                  child: Text(
+                                    'No visited centers checked into yet. Tap "I\'ve Been Here" when visiting other worship centers!',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontStyle: FontStyle.italic,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    for (int i = 0; i < 4; i++)
+                                      if (i < visits.length)
+                                        Expanded(
+                                          child: InkWell(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            onTap: () {
+                                              final visit = visits[i];
+                                              _openCenterDetail(
+                                                context,
+                                                (visit['centerName']
+                                                            as String?)
+                                                        ?.trim() ??
+                                                    'Center',
+                                                (visit['centerAddress']
+                                                            as String?)
+                                                        ?.trim() ??
+                                                    '',
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                vertical: 6,
+                                                horizontal: 2,
+                                              ),
+                                              child: Column(
+                                                mainAxisSize:
+                                                    MainAxisSize.min,
+                                                children: [
+                                                  CircleAvatar(
+                                                    radius: 24,
+                                                    backgroundColor: isDark
+                                                        ? const Color(
+                                                            0xFF3A3B3C)
+                                                        : const Color(
+                                                            0xFFE4E6EB),
+                                                    child: Icon(
+                                                      Icons.church_rounded,
+                                                      size: 22,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .primary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    (visits[i]['centerName']
+                                                                as String?)
+                                                            ?.trim() ??
+                                                        'Center',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: theme
+                                                          .textTheme
+                                                          .bodyLarge
+                                                          ?.color,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    textAlign:
+                                                        TextAlign.center,
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    _extractShortAddress(
+                                                      (visits[i]['centerAddress']
+                                                              as String?) ??
+                                                          '',
+                                                    ),
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: theme
+                                                          .textTheme
+                                                          .bodySmall
+                                                          ?.color,
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    textAlign:
+                                                        TextAlign.center,
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        const Expanded(child: SizedBox()),
+                                  ],
+                                ),
+                            ],
+                          );
+                        },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
@@ -1018,7 +1734,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
+
+                      // Horizontal Filter Chips Row
+                      if (!_isLoadingContributions && _contributions.isNotEmpty) ...[
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildContributionFilterChip(
+                                label: 'Posts',
+                                categoryKey: 'Posts',
+                                count: _contributions
+                                    .where((i) => i['type'] == 'Post')
+                                    .length,
+                                theme: theme,
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildContributionFilterChip(
+                                label: 'Songs',
+                                categoryKey: 'Songs',
+                                count: _contributions
+                                    .where(
+                                      (i) => i['type'] == 'Song Suggestion',
+                                    )
+                                    .length,
+                                theme: theme,
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 8),
+                              _buildContributionFilterChip(
+                                label: 'Center Updates',
+                                categoryKey: 'Centers',
+                                count: _contributions
+                                    .where((i) => i['type'] == 'Center Update')
+                                    .length,
+                                theme: theme,
+                                isDark: isDark,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       if (_isLoadingContributions)
                         const Padding(
@@ -1061,87 +1820,201 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                         )
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _contributions.length > _visibleCount
-                              ? _visibleCount
-                              : _contributions.length,
-                          itemBuilder: (context, index) {
-                            final item = _contributions[index];
-                            final String type = item['type'] ?? '';
-                            final String title = item['title'] ?? '';
-                            final String subtitle = item['subtitle'] ?? '';
-                            final DateTime timestamp =
-                                item['timestamp'] as DateTime;
-                            final String status = item['status'] ?? '';
-                            final bool isExpiredPost =
-                                type == 'Post' &&
-                                DateTime.now().difference(timestamp).inDays >=
-                                    5;
+                      else if (_contributions.where((i) {
+                        if (_selectedContributionCategory == 'Posts') {
+                          return i['type'] == 'Post';
+                        }
+                        if (_selectedContributionCategory == 'Songs') {
+                          return i['type'] == 'Song Suggestion';
+                        }
+                        if (_selectedContributionCategory == 'Centers') {
+                          return i['type'] == 'Center Update';
+                        }
+                        return true;
+                      }).isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF242526)
+                                : const Color(0xFFF0F2F5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                _selectedContributionCategory == 'Posts'
+                                    ? Icons.post_add_rounded
+                                    : (_selectedContributionCategory == 'Songs'
+                                          ? Icons.queue_music_rounded
+                                          : Icons.edit_location_alt_rounded),
+                                size: 36,
+                                color: theme.textTheme.bodySmall?.color
+                                    ?.withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'No $_selectedContributionCategory found',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _selectedContributionCategory == 'Posts'
+                                    ? 'Share your thoughts with the community to see them here.'
+                                    : (_selectedContributionCategory == 'Songs'
+                                          ? 'Submit your favorite hymns or new worship songs.'
+                                          : 'Suggest edits or corrections for worship centers.'),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      else ...[
+                        () {
+                          final filteredList = _contributions.where((i) {
+                            if (_selectedContributionCategory == 'Posts') {
+                              return i['type'] == 'Post';
+                            }
+                            if (_selectedContributionCategory == 'Songs') {
+                              return i['type'] == 'Song Suggestion';
+                            }
+                            if (_selectedContributionCategory == 'Centers') {
+                              return i['type'] == 'Center Update';
+                            }
+                            return true;
+                          }).toList();
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filteredList.length > _visibleCount
+                                ? _visibleCount
+                                : filteredList.length,
+                            itemBuilder: (context, index) {
+                              final item = filteredList[index];
+                              final String type = item['type'] ?? '';
+                              final String title = item['title'] ?? '';
+                              final String subtitle = item['subtitle'] ?? '';
+                              final DateTime timestamp =
+                                  item['timestamp'] as DateTime;
+                              final String status = item['status'] ?? '';
+                              final bool isExpiredPost =
+                                  type == 'Post' &&
+                                  DateTime.now().difference(timestamp).inDays >=
+                                      5;
+
+                            if (type == 'Song Suggestion') {
+                              final statusLower = status.toLowerCase();
+                              final statusColor = statusLower == 'approved'
+                                  ? Colors.green
+                                  : (statusLower == 'rejected'
+                                      ? Colors.red
+                                      : Colors.orange);
+                              final statusIcon = statusLower == 'approved'
+                                  ? Icons.check_circle_rounded
+                                  : (statusLower == 'rejected'
+                                      ? Icons.cancel_rounded
+                                      : Icons.schedule_rounded);
+                              final statusLabel = statusLower == 'approved'
+                                  ? 'Approved'
+                                  : (statusLower == 'rejected'
+                                      ? 'Rejected'
+                                      : 'Pending Review');
+                              final authorStr =
+                                  (item['author'] as String?)?.isNotEmpty == true
+                                      ? item['author']
+                                      : 'Unknown';
+
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: BorderSide(
+                                    color: theme.dividerColor.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                ),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 6,
+                                  ),
+                                  title: Text(
+                                    title.isNotEmpty ? title : 'Untitled Song',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'By $authorStr • ${_formatDate(timestamp)}',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Tooltip(
+                                        message: statusLabel,
+                                        child: Icon(
+                                          statusIcon,
+                                          color: statusColor,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.more_horiz_rounded,
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
+                                        ),
+                                        tooltip: 'Options',
+                                        onPressed: () =>
+                                            _showContributionOptions(
+                                          context,
+                                          item,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  onTap: () => _showSongSubmissionDetailsSheet(
+                                    context,
+                                    item,
+                                    theme,
+                                    isDark,
+                                  ),
+                                ),
+                              );
+                            }
 
                             // Type-specific body formatting
                             Widget bodyWidget;
                             if (type == 'Post') {
                               bodyWidget = ExpandableText(
                                 text: title,
-                                style: theme.textTheme.bodyMedium,
-                              );
-                            } else if (type == 'Song Suggestion') {
-                              bodyWidget = Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Suggested Worship Song',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: theme.colorScheme.primary,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    subtitle,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  if (item['lyrics'] != null &&
-                                      (item['lyrics'] as String)
-                                          .isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? const Color(0xFF2A2B2C)
-                                            : const Color(0xFFEAEBED),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item['lyrics'] as String,
-                                        style: TextStyle(
-                                          fontFamily: 'monospace',
-                                          fontSize: 12,
-                                          color:
-                                              theme.textTheme.bodyMedium?.color,
-                                        ),
-                                        maxLines: 4,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ],
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontSize: 14.5,
+                                  height: 1.45,
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
                               );
                             } else {
                               bodyWidget = Column(
@@ -1275,28 +2148,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             Text(
                                               isExpiredPost
                                                   ? 'Expired'
-                                                  : (status == 'pending'
-                                                        ? 'Pending'
-                                                        : (status == 'reported'
-                                                              ? 'Reported'
-                                                              : 'Active')),
+                                                  : (status == 'approved'
+                                                        ? 'Approved'
+                                                        : (status == 'rejected'
+                                                              ? 'Rejected'
+                                                              : (status == 'pending'
+                                                                    ? 'Pending'
+                                                                    : (status == 'reported'
+                                                                          ? 'Reported'
+                                                                          : 'Active')))),
                                               style: theme.textTheme.bodySmall?.copyWith(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                                 color: isExpiredPost
                                                     ? Colors.grey.shade600
-                                                    : (status == 'pending'
-                                                          ? Colors
-                                                                .orange
-                                                                .shade800
-                                                          : (status ==
-                                                                    'reported'
-                                                                ? Colors
-                                                                      .red
-                                                                      .shade800
-                                                                : Colors
-                                                                      .green
-                                                                      .shade800)),
+                                                    : (status == 'approved'
+                                                          ? Colors.green.shade800
+                                                          : (status == 'rejected'
+                                                                ? Colors.red.shade800
+                                                                : (status == 'pending'
+                                                                      ? Colors.orange.shade800
+                                                                      : (status == 'reported'
+                                                                            ? Colors.red.shade800
+                                                                            : Colors.green.shade800)))),
                                               ),
                                             ),
                                           ],
@@ -1327,36 +2201,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             );
                           },
-                        ),
-                      if (_contributions.length > _visibleCount) ...[
-                        const SizedBox(height: 12),
-                        Center(
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _visibleCount += 10;
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.expand_more_rounded,
-                              size: 18,
-                            ),
-                            label: const Text(
-                              'Load More',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
+                        );
+                      }(),
+                      () {
+                        final filteredList = _contributions.where((i) {
+                          if (_selectedContributionCategory == 'Posts') {
+                            return i['type'] == 'Post';
+                          }
+                          if (_selectedContributionCategory == 'Songs') {
+                            return i['type'] == 'Song Suggestion';
+                          }
+                          if (_selectedContributionCategory == 'Centers') {
+                            return i['type'] == 'Center Update';
+                          }
+                          return true;
+                        }).toList();
+
+                        if (filteredList.length > _visibleCount) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Center(
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _visibleCount += 10;
+                                  });
+                                },
+                                icon: const Icon(
+                                  Icons.expand_more_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text(
+                                  'Load More',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
                             ),
-                          ),
-                        ),
-                      ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }(),
+                    ],
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -1555,6 +2449,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ? 'Member'
         : _nicknameController.text.trim();
 
+    if (nickname.length > 25) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nickname must be 25 characters or less.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.orangeAccent,
+          ),
+        );
+      }
+      return;
+    }
+
     if (nickname != widget.currentProfile.nickname) {
       try {
         final exists = await FirestoreService().checkNicknameExists(nickname);
@@ -1682,7 +2589,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             const SizedBox(height: 6),
             TextFormField(
               controller: _nicknameController,
-              decoration: const InputDecoration(),
+              maxLength: 25,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Hermano. John, Hermana Mary',
+                counterText: '',
+              ),
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) {
+                  return 'Please enter your preferred nickname';
+                }
+                if (val.trim().length > 25) {
+                  return 'Nickname must be 25 characters or less';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 16),
 

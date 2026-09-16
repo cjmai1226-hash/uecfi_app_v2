@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/database_helper.dart';
 import '../../models/center_model.dart';
-import '../../widgets/feed_composer_card.dart';
 import '../details/center_detail_screen.dart';
 import '../../services/ad_service.dart';
 import 'suggest_new_center_screen.dart';
@@ -43,21 +42,6 @@ class _CentersScreenState extends State<CentersScreen> {
     }
   }
 
-  Widget _buildCenterComposerCard(ThemeData theme) {
-    return FeedComposerCard(
-      placeholderTemplate: 'Suggest a new center, {name}...',
-      icon: Icons.add_location_alt_rounded,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SuggestNewCenterScreen(),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -70,8 +54,61 @@ class _CentersScreenState extends State<CentersScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: _buildCenterComposerCard(theme),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Worship Centers',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const SuggestNewCenterScreen(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.add_location_alt_rounded,
+                                  size: 16,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Suggest Center',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 if (_centers.isEmpty)
@@ -116,51 +153,71 @@ class _CentersScreenState extends State<CentersScreen> {
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // District & Area Badges
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Text(
-                                                center.name,
-                                                style: theme
-                                                    .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                  fontSize: 16,
+                                              if (center.district.isNotEmpty)
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 9,
+                                                    vertical: 3,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: theme
+                                                        .colorScheme.primary
+                                                        .withValues(alpha: 0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                      color: theme
+                                                          .colorScheme.primary
+                                                          .withValues(alpha: 0.25),
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    center.district,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: theme
+                                                          .colorScheme.primary,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
                                               if (center.area.isNotEmpty) ...[
-                                                const SizedBox(height: 6),
+                                                const SizedBox(width: 6),
                                                 Container(
                                                   padding: const EdgeInsets
                                                       .symmetric(
                                                     horizontal: 8,
-                                                    vertical: 2,
+                                                    vertical: 3,
                                                   ),
                                                   decoration: BoxDecoration(
                                                     color: theme
-                                                        .colorScheme
-                                                        .secondary
-                                                        .withValues(
-                                                      alpha: 0.1,
-                                                    ),
+                                                        .colorScheme.secondary
+                                                        .withValues(alpha: 0.12),
                                                     borderRadius:
-                                                        BorderRadius.circular(
-                                                      6,
+                                                        BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                      color: theme
+                                                          .colorScheme.secondary
+                                                          .withValues(alpha: 0.25),
+                                                      width: 1,
                                                     ),
                                                   ),
                                                   child: Text(
-                                                    center.area.startsWith(
-                                                      'Area',
-                                                    )
+                                                    center.area.startsWith('Area')
                                                         ? center.area
                                                         : 'Area ${center.area}',
                                                     style: TextStyle(
@@ -168,80 +225,55 @@ class _CentersScreenState extends State<CentersScreen> {
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       color: theme
-                                                          .colorScheme
-                                                          .secondary,
+                                                          .colorScheme.secondary,
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ],
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
+                                          const SizedBox(height: 6),
 
-                                        // District Badge placed in trailing position
-                                        if (center.district.isNotEmpty)
-                                          Container(
-                                            padding:
-                                                const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: theme
-                                                  .colorScheme
-                                                  .primary
-                                                  .withValues(
-                                                alpha: 0.12,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
-                                                color: theme
-                                                    .colorScheme
-                                                    .primary
-                                                    .withValues(
-                                                  alpha: 0.25,
-                                                ),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              center.district,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w800,
-                                                color: theme
-                                                    .colorScheme
-                                                    .primary,
-                                              ),
+                                          // Center Name Title
+                                          Text(
+                                            center.name,
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                              fontSize: 15.5,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                      ],
-                                    ),
-                                    if (center.address.isNotEmpty) ...[
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.place_outlined,
-                                            size: 16,
-                                            color: theme
-                                                .textTheme
-                                                .bodySmall
-                                                ?.color,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              center.address,
-                                              style:
-                                                  theme.textTheme.bodyMedium,
+                                          if (center.address.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+
+                                            // Address Snippet (1 Maxline)
+                                            Text(
+                                              center.address
+                                                  .replaceAll(
+                                                      RegExp(r'\s+'), ' ')
+                                                  .trim(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme
+                                                  .textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                fontSize: 13,
+                                                color: theme.textTheme
+                                                    .bodySmall?.color,
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ],
                                       ),
-                                    ],
+                                    ),
+                                    const SizedBox(width: 10),
+
+                                    // Trailing Chevron Icon
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: theme.hintColor,
+                                      size: 22,
+                                    ),
                                   ],
                                 ),
                               ),

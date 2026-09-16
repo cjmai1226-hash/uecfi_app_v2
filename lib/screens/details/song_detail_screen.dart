@@ -4,6 +4,7 @@ import '../../models/song_model.dart';
 import '../../services/bookmark_service.dart';
 import '../../utils/chord_helper.dart';
 import '../../services/chords_settings_service.dart';
+import '../../utils/theme.dart';
 
 class SongDetailScreen extends StatefulWidget {
   final List<SongModel> songs;
@@ -68,6 +69,7 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
   void _showFontSizeSlider(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -75,66 +77,69 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final theme = Theme.of(context);
-            return Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Font Size',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Font Size',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${_fontSize.toInt()} px',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                        Text(
+                          '${_fontSize.toInt()} px',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Text(
-                        'A',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Text(
+                          'A',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: _fontSize,
-                          min: 10.0,
-                          max: 24.0,
-                          divisions: 14,
-                          label: '${_fontSize.toInt()} px',
-                          onChanged: (val) {
-                            setModalState(() {});
-                            setState(() {
-                              _fontSize = val;
-                            });
-                          },
+                        Expanded(
+                          child: Slider(
+                            value: _fontSize,
+                            min: 10.0,
+                            max: 24.0,
+                            divisions: 14,
+                            label: '${_fontSize.toInt()} px',
+                            onChanged: (val) {
+                              setModalState(() {});
+                              setState(() {
+                                _fontSize = val;
+                              });
+                            },
+                          ),
                         ),
-                      ),
-                      const Text(
-                        'A',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                        const Text(
+                          'A',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -147,7 +152,7 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
   Widget _buildAlignedChordsView(BuildContext context, String rawText) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
-    final textColor = theme.textTheme.bodyMedium?.color ?? Colors.black87;
+    final textColor = context.contentColor;
 
     // Fixed-width monospace style matching DB Browser for SQLite with dynamic _fontSize
     final monoBaseStyle = TextStyle(
@@ -157,6 +162,7 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
       letterSpacing: 0.0,
       wordSpacing: 0.0,
       height: 1.5,
+      color: textColor,
     );
 
     // If chords are toggled off, render standard soft-wrapping lyrics text that flows down vertically
@@ -308,9 +314,13 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          currentSong.title.isNotEmpty ? currentSong.title : 'Song Details',
+        title: Image.asset(
+          'assets/images/brand_mark.png',
+          height: 32,
+          width: 32,
+          fit: BoxFit.contain,
         ),
+        centerTitle: true,
         elevation: 0,
         actions: [
           // Font Size Slider Button
@@ -348,67 +358,31 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
             ],
             const SizedBox(height: 14),
 
-            // Category & Chords Badges Row
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (currentSong.category.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.brightness == Brightness.dark
-                          ? const Color(0xFF3A3B3C)
-                          : const Color(0xFFE4E6EB),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      currentSong.category,
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+            // Category Badge
+            if (currentSong.category.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.brightness == Brightness.dark
+                      ? const Color(0xFF3A3B3C)
+                      : const Color(0xFFE4E6EB),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  currentSong.category,
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
-                if (currentSong.hasChords)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.brightness == Brightness.dark
-                          ? const Color(0xFF3A3B3C)
-                          : const Color(0xFFE4E6EB),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.music_note_rounded,
-                          color: theme.colorScheme.primary,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _instrument,
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ] else
+              const SizedBox(height: 8),
 
             // Controls Toolbar: Transpose (-/+) & Instrument Choice (Guitar / Ukulele)
             if (currentSong.hasChords && _showChords && ChordsSettingsService.instance.value)

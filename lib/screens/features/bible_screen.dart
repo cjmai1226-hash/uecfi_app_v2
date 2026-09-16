@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../services/database_helper.dart';
 import '../../models/bible_verse_model.dart';
+import '../../services/database_helper.dart';
+import '../../widgets/bible_selector_sheet.dart';
 
 class BibleScreen extends StatefulWidget {
-  const BibleScreen({super.key});
+  final Map<String, String>? initialBook;
+  final int initialChapter;
+  final int? initialVerse;
+
+  const BibleScreen({
+    super.key,
+    this.initialBook,
+    this.initialChapter = 1,
+    this.initialVerse,
+  });
 
   @override
   State<BibleScreen> createState() => _BibleScreenState();
@@ -11,12 +21,17 @@ class BibleScreen extends StatefulWidget {
 
 class _BibleScreenState extends State<BibleScreen> {
   bool _isLoading = true;
-  List<Map<String, String>> _books = [];
+  List<Map<String, String>> _allBooks = [];
   Map<String, String>? _selectedBook;
-  int _chaptersCount = 0;
   int _selectedChapter = 1;
+  int? _highlightedVerse;
+
+  int _chaptersCount = 0;
   List<BibleVerseModel> _verses = [];
   double _fontSize = 18.0;
+
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _verseKeys = {};
 
   // Search state
   bool _isSearching = false;
@@ -27,113 +42,158 @@ class _BibleScreenState extends State<BibleScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedChapter = widget.initialChapter;
+    _highlightedVerse = widget.initialVerse;
     _loadInitialData();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadInitialData() async {
+    setState(() => _isLoading = true);
     try {
       final books = await DatabaseHelper.getBibleBooks();
       if (books.isNotEmpty) {
-        setState(() {
-          _books = books;
-          _selectedBook = books.first;
-        });
-        await _loadChaptersAndVerses(books.first, 1);
+        _allBooks = books;
+        _selectedBook = widget.initialBook ?? books.first;
+        await _loadChapterContent(targetVerse: _highlightedVerse);
       } else {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint('Error loading initial Bible data: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      debugPrint('Error loading Bible initial data: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _loadChaptersAndVerses(Map<String, String> book, int chapter) async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadChapterContent({int? targetVerse}) async {
+    if (_selectedBook == null) return;
+
+    setState(() => _isLoading = true);
 
     try {
-      final bookId = book['book_id']!;
-      final chaptersCount = await DatabaseHelper.getBibleChaptersCount(bookId);
-      final verses = await DatabaseHelper.getBibleVerses(bookId, chapter);
+      final bookId = _selectedBook!['book_id']!;
+      final count = await DatabaseHelper.getBibleChaptersCount(bookId);
+      final verses = await DatabaseHelper.getBibleVerses(bookId, _selectedChapter);
 
-      setState(() {
-        _selectedBook = book;
-        _chaptersCount = chaptersCount;
-        _selectedChapter = chapter;
-        _verses = verses;
-        _isLoading = false;
-      });
+      _verseKeys.clear();
+      for (final v in verses) {
+        _verseKeys[v.verse] = GlobalKey();
+      }
+
+      if (mounted) {
+        setState(() {
+          _chaptersCount = count;
+          _verses = verses;
+          _isLoading = false;
+          _highlightedVerse = targetVerse;
+        });
+
+        // If target verse is specified, smoothly scroll to it
+        if (_highlightedVerse != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToVerse(_highlightedVerse!);
+          });
+        } else {
+          // Scroll to top when changing chapters
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_scrollController.hasClients) {
+              _scrollController.jumpTo(0);
+            }
+          });
+        }
+      }
     } catch (e) {
-      debugPrint('Error loading chapter details: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      debugPrint('Error loading Bible chapter: $e');
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Change chapter relative to current (e.g. +1 or -1)
+  void _scrollToVerse(int verseNum) {
+    final key = _verseKeys[verseNum];
+    if (key != null && key.currentContext != null) {
+      Scrollable.ensureVisible(
+        key.currentContext!,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.25,
+      );
+    }
+  }
+
   Future<void> _navigateChapter(int delta) async {
     if (_selectedBook == null) return;
     int nextChapter = _selectedChapter + delta;
 
     if (nextChapter >= 1 && nextChapter <= _chaptersCount) {
-      await _loadChaptersAndVerses(_selectedBook!, nextChapter);
+      setState(() {
+        _selectedChapter = nextChapter;
+        _highlightedVerse = null;
+      });
+      await _loadChapterContent();
     } else if (delta < 0) {
       // Go to previous book, last chapter
-      final currentBookIndex = _books.indexOf(_selectedBook!);
+      final currentBookIndex = _allBooks.indexWhere(
+        (b) => b['book_id'] == _selectedBook!['book_id'],
+      );
       if (currentBookIndex > 0) {
-        final prevBook = _books[currentBookIndex - 1];
-        final prevChaptersCount = await DatabaseHelper.getBibleChaptersCount(prevBook['book_id']!);
-        await _loadChaptersAndVerses(prevBook, prevChaptersCount);
+        final prevBook = _allBooks[currentBookIndex - 1];
+        final prevChaptersCount =
+            await DatabaseHelper.getBibleChaptersCount(prevBook['book_id']!);
+        setState(() {
+          _selectedBook = prevBook;
+          _selectedChapter = prevChaptersCount;
+          _highlightedVerse = null;
+        });
+        await _loadChapterContent();
       }
     } else if (delta > 0) {
       // Go to next book, chapter 1
-      final currentBookIndex = _books.indexOf(_selectedBook!);
-      if (currentBookIndex < _books.length - 1) {
-        final nextBook = _books[currentBookIndex + 1];
-        await _loadChaptersAndVerses(nextBook, 1);
+      final currentBookIndex = _allBooks.indexWhere(
+        (b) => b['book_id'] == _selectedBook!['book_id'],
+      );
+      if (currentBookIndex >= 0 && currentBookIndex < _allBooks.length - 1) {
+        final nextBook = _allBooks[currentBookIndex + 1];
+        setState(() {
+          _selectedBook = nextBook;
+          _selectedChapter = 1;
+          _highlightedVerse = null;
+        });
+        await _loadChapterContent();
       }
     }
   }
 
-  /// Open combined Book & Chapter selector inside a single Bottom Sheet using TabBar
-  void _showCombinedBookChapterSelector() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      isScrollControlled: true,
-      builder: (context) {
-        return _CombinedBibleSelectorSheet(
-          books: _books,
-          initialBook: _selectedBook,
-          initialChapter: _selectedChapter,
-          onSelectionComplete: (book, chapter) {
-            Navigator.pop(context);
-            _loadChaptersAndVerses(book, chapter);
-          },
-        );
+  void _openFastLookupSheet({int initialTab = 0}) {
+    if (_allBooks.isEmpty) return;
+
+    BibleSelectorSheet.show(
+      context,
+      books: _allBooks,
+      initialBook: _selectedBook,
+      initialChapter: _selectedChapter,
+      initialVerse: _highlightedVerse,
+      initialTabIndex: initialTab,
+      onSelectionComplete: (book, chapter, verse) {
+        setState(() {
+          _selectedBook = book;
+          _selectedChapter = chapter;
+          _highlightedVerse = verse;
+        });
+        _loadChapterContent(targetVerse: verse);
       },
     );
   }
 
-  /// Open Font Size Slider Bottom Sheet
   void _showFontSizeSlider() {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -141,66 +201,55 @@ class _BibleScreenState extends State<BibleScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final theme = Theme.of(context);
-            return Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Font Size',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Font Size',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${_fontSize.toInt()} px',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                        Text(
+                          '${_fontSize.toInt()} px',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Text(
-                        'A',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Text('A', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Expanded(
+                          child: Slider(
+                            value: _fontSize,
+                            min: 12.0,
+                            max: 30.0,
+                            divisions: 18,
+                            label: '${_fontSize.toInt()} px',
+                            onChanged: (val) {
+                              setModalState(() {});
+                              setState(() => _fontSize = val);
+                            },
+                          ),
                         ),
-                      ),
-                      Expanded(
-                        child: Slider(
-                          value: _fontSize,
-                          min: 12.0,
-                          max: 28.0,
-                          divisions: 16,
-                          label: '${_fontSize.toInt()} px',
-                          onChanged: (val) {
-                            setModalState(() {});
-                            setState(() {
-                              _fontSize = val;
-                            });
-                          },
-                        ),
-                      ),
-                      const Text(
-                        'A',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const Text('A', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -211,46 +260,50 @@ class _BibleScreenState extends State<BibleScreen> {
 
   Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) {
-      setState(() {
-        _searchResults = [];
-      });
+      setState(() => _searchResults = []);
       return;
     }
 
-    setState(() {
-      _isSearchLoading = true;
-    });
+    setState(() => _isSearchLoading = true);
 
     try {
       final results = await DatabaseHelper.searchBible(query);
-      setState(() {
-        _searchResults = results;
-        _isSearchLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearchLoading = false;
+        });
+      }
     } catch (e) {
-      debugPrint('Error performing Bible search: $e');
-      setState(() {
-        _isSearchLoading = false;
-      });
+      if (mounted) setState(() => _isSearchLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    // Build footnotes list
-    final footnoteVerses = _verses.where((v) => v.footnotes != null && v.footnotes!.trim().isNotEmpty).toList();
+    final footnoteVerses = _verses
+        .where((v) => v.footnotes != null && v.footnotes!.trim().isNotEmpty)
+        .toList();
+
+    final bookName = _selectedBook?['book_name'] ?? 'Bible';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ilocano Bible (Ilodor)'),
+        title: Image.asset(
+          'assets/images/brand_mark.png',
+          height: 32,
+          width: 32,
+          fit: BoxFit.contain,
+        ),
+        centerTitle: true,
         elevation: 0,
         actions: [
-          // Search toggle button
           IconButton(
             icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
-            tooltip: 'Search Bible',
+            tooltip: 'Search Scriptures',
             onPressed: () {
               setState(() {
                 if (_isSearching) {
@@ -263,53 +316,43 @@ class _BibleScreenState extends State<BibleScreen> {
               });
             },
           ),
-          // Font size selector button
           IconButton(
             icon: const Icon(Icons.format_size_rounded),
-            tooltip: 'Adjust Font Size',
+            tooltip: 'Font Size',
             onPressed: _showFontSizeSlider,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
         children: [
-          // Search Bar Row below AppBar
+          // Search Input Bar
           if (_isSearching)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: theme.cardColor,
-                border: Border(
-                  bottom: BorderSide(
-                    color: theme.dividerColor,
-                    width: 1,
-                  ),
-                ),
+                border: Border(bottom: BorderSide(color: theme.dividerColor)),
               ),
               child: TextField(
                 controller: _searchController,
                 autofocus: true,
                 onChanged: _performSearch,
                 decoration: InputDecoration(
-                  hintText: 'Search Ilocano Bible...',
+                  hintText: 'Search Ilocano Bible (e.g. ayat, namnama)...',
                   prefixIcon: const Icon(Icons.search_rounded, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded, size: 18),
                           onPressed: () {
-                            setState(() {
-                              _searchController.clear();
-                            });
+                            _searchController.clear();
                             _performSearch('');
                           },
                         )
                       : null,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   filled: true,
-                  fillColor: theme.brightness == Brightness.dark
-                      ? const Color(0xFF3A3B3C)
-                      : const Color(0xFFE4E6EB),
+                  fillColor: isDark ? const Color(0xFF2A2B2E) : const Color(0xFFF0F2F5),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(20),
                     borderSide: BorderSide.none,
@@ -318,52 +361,85 @@ class _BibleScreenState extends State<BibleScreen> {
               ),
             ),
 
-          // Main body content
           Expanded(
             child: _isSearching && _searchController.text.trim().isNotEmpty
-                ? _buildSearchView(theme)
+                ? _buildSearchResults(theme)
                 : _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : GestureDetector(
                         onHorizontalDragEnd: (details) {
                           if (details.primaryVelocity != null) {
-                            if (details.primaryVelocity! > 100) {
+                            if (details.primaryVelocity! > 150) {
                               _navigateChapter(-1);
-                            } else if (details.primaryVelocity! < -100) {
+                            } else if (details.primaryVelocity! < -150) {
                               _navigateChapter(1);
                             }
                           }
                         },
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(20),
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                '${_selectedBook?["book_name"]} $_selectedChapter',
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.primary,
-                                ),
+                              // Chapter Title
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$bookName $_selectedChapter',
+                                    style: theme.textTheme.headlineSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Ti Biblia (Ilocano)',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 16),
-                              Divider(color: theme.dividerColor, height: 24),
+                              const SizedBox(height: 12),
+                              Divider(color: theme.dividerColor, height: 20),
+
+                              // Scripture Verses
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _verses.length,
                                 itemBuilder: (context, index) {
                                   final verse = _verses[index];
-                                  final hasFootnote = verse.footnotes != null && verse.footnotes!.trim().isNotEmpty;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
+                                  final isTarget = _highlightedVerse == verse.verse;
+                                  final hasFootnote = verse.footnotes != null &&
+                                      verse.footnotes!.trim().isNotEmpty;
+
+                                  return Container(
+                                    key: _verseKeys[verse.verse],
+                                    margin: const EdgeInsets.only(bottom: 10),
+                                    padding: isTarget
+                                        ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
+                                        : EdgeInsets.zero,
+                                    decoration: isTarget
+                                        ? BoxDecoration(
+                                            color: theme.colorScheme.primary
+                                                .withValues(alpha: isDark ? 0.18 : 0.10),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: theme.colorScheme.primary
+                                                  .withValues(alpha: 0.4),
+                                            ),
+                                          )
+                                        : null,
                                     child: Text.rich(
                                       TextSpan(
                                         children: [
                                           TextSpan(
                                             text: '${verse.verse} ',
                                             style: TextStyle(
-                                              fontSize: _fontSize * 0.8,
+                                              fontSize: _fontSize * 0.85,
                                               fontWeight: FontWeight.bold,
                                               color: theme.colorScheme.primary,
                                             ),
@@ -373,7 +449,9 @@ class _BibleScreenState extends State<BibleScreen> {
                                             style: TextStyle(
                                               fontSize: _fontSize,
                                               height: 1.6,
-                                              color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.95),
+                                              color: isDark
+                                                  ? const Color(0xFFF5F5FA)
+                                                  : const Color(0xFF0E0E14),
                                             ),
                                           ),
                                           if (hasFootnote) ...[
@@ -384,7 +462,7 @@ class _BibleScreenState extends State<BibleScreen> {
                                                   '*',
                                                   style: TextStyle(
                                                     color: theme.colorScheme.primary,
-                                                    fontSize: _fontSize * 0.8,
+                                                    fontSize: _fontSize * 0.85,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
@@ -397,9 +475,11 @@ class _BibleScreenState extends State<BibleScreen> {
                                   );
                                 },
                               ),
+
+                              // Footnotes Section
                               if (footnoteVerses.isNotEmpty) ...[
-                                const SizedBox(height: 32),
-                                Divider(color: theme.dividerColor, height: 32),
+                                const SizedBox(height: 28),
+                                Divider(color: theme.dividerColor, height: 28),
                                 Text(
                                   'Footnotes',
                                   style: theme.textTheme.titleMedium?.copyWith(
@@ -442,61 +522,70 @@ class _BibleScreenState extends State<BibleScreen> {
           ),
         ],
       ),
+
+      // Bottom Navigation Bar
       bottomNavigationBar: _isSearching
           ? null
           : Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: theme.cardColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 6,
                     offset: const Offset(0, -2),
                   ),
                 ],
-                border: Border(
-                  top: BorderSide(
-                    color: theme.dividerColor,
-                    width: 1,
-                  ),
-                ),
+                border: Border(top: BorderSide(color: theme.dividerColor)),
               ),
               child: SafeArea(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.chevron_left_rounded),
+                      icon: const Icon(Icons.chevron_left_rounded, size: 28),
                       tooltip: 'Previous Chapter',
                       onPressed: () => _navigateChapter(-1),
                     ),
                     Expanded(
                       child: InkWell(
-                        onTap: _showCombinedBookChapterSelector,
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        onTap: () => _openFastLookupSheet(initialTab: 1),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                '${_selectedBook?["book_name"]} $_selectedChapter',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
+                              Flexible(
+                                child: Text(
+                                  '$bookName $_selectedChapter',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.arrow_drop_down_rounded, size: 20),
+                              Icon(
+                                Icons.unfold_more_rounded,
+                                size: 18,
+                                color: theme.colorScheme.primary,
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.chevron_right_rounded),
+                      icon: const Icon(Icons.chevron_right_rounded, size: 28),
                       tooltip: 'Next Chapter',
                       onPressed: () => _navigateChapter(1),
                     ),
@@ -507,21 +596,13 @@ class _BibleScreenState extends State<BibleScreen> {
     );
   }
 
-  Widget _buildSearchView(ThemeData theme) {
+  Widget _buildSearchResults(ThemeData theme) {
     if (_isSearchLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_searchController.text.trim().isEmpty) {
-      return const Center(
-        child: Text('Type a query to search scriptures.'),
-      );
-    }
-
     if (_searchResults.isEmpty) {
-      return const Center(
-        child: Text('No scriptures match your search.'),
-      );
+      return const Center(child: Text('No scriptures match your search.'));
     }
 
     return ListView.builder(
@@ -531,7 +612,7 @@ class _BibleScreenState extends State<BibleScreen> {
         final result = _searchResults[index];
         return Card(
           elevation: 0,
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: const EdgeInsets.only(bottom: 10),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(color: theme.dividerColor),
@@ -551,14 +632,15 @@ class _BibleScreenState extends State<BibleScreen> {
                 result.text,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   height: 1.4,
+                  fontSize: 13,
+                  color: theme.textTheme.bodySmall?.color,
                 ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             onTap: () {
-              // Go directly to that book, chapter, and close search
-              final matchedBook = _books.firstWhere(
+              final matchedBook = _allBooks.firstWhere(
                 (b) => b['book_id'] == result.bookId,
                 orElse: () => {'book_id': result.bookId, 'book_name': result.bookName},
               );
@@ -566,8 +648,11 @@ class _BibleScreenState extends State<BibleScreen> {
                 _isSearching = false;
                 _searchController.clear();
                 _searchResults = [];
+                _selectedBook = matchedBook;
+                _selectedChapter = result.chapter;
+                _highlightedVerse = result.verse;
               });
-              _loadChaptersAndVerses(matchedBook, result.chapter);
+              _loadChapterContent(targetVerse: result.verse);
             },
           ),
         );
@@ -575,278 +660,3 @@ class _BibleScreenState extends State<BibleScreen> {
     );
   }
 }
-
-class _CombinedBibleSelectorSheet extends StatefulWidget {
-  final List<Map<String, String>> books;
-  final Map<String, String>? initialBook;
-  final int initialChapter;
-  final void Function(Map<String, String> book, int chapter) onSelectionComplete;
-
-  const _CombinedBibleSelectorSheet({
-    required this.books,
-    required this.initialBook,
-    required this.initialChapter,
-    required this.onSelectionComplete,
-  });
-
-  @override
-  State<_CombinedBibleSelectorSheet> createState() => _CombinedBibleSelectorSheetState();
-}
-
-class _CombinedBibleSelectorSheetState extends State<_CombinedBibleSelectorSheet>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  Map<String, String>? _selectedBook;
-  int _chaptersCount = 0;
-  bool _isLoadingChapters = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _selectedBook = widget.initialBook;
-    if (_selectedBook != null) {
-      _loadChaptersCount(_selectedBook!['book_id']!);
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadChaptersCount(String bookId) async {
-    setState(() {
-      _isLoadingChapters = true;
-    });
-    try {
-      final count = await DatabaseHelper.getBibleChaptersCount(bookId);
-      setState(() {
-        _chaptersCount = count;
-        _isLoadingChapters = false;
-      });
-    } catch (e) {
-      debugPrint('Error getting chapter counts in sheet: $e');
-      setState(() {
-        _isLoadingChapters = false;
-      });
-    }
-  }
-
-  void _onBookSelected(Map<String, String> book) async {
-    setState(() {
-      _selectedBook = book;
-    });
-    await _loadChaptersCount(book['book_id']!);
-    _tabController.animateTo(1);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final oldTestamentBooks = widget.books
-        .where((b) => !_newTestamentBookIds.contains(b['book_id']))
-        .toList();
-    final newTestamentBooks = widget.books
-        .where((b) => _newTestamentBookIds.contains(b['book_id']))
-        .toList();
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 8),
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: theme.dividerColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TabBar(
-            controller: _tabController,
-            indicatorColor: theme.colorScheme.primary,
-            labelColor: theme.colorScheme.primary,
-            unselectedLabelColor: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            indicatorSize: TabBarIndicatorSize.tab,
-            tabs: const [
-              Tab(text: 'Book'),
-              Tab(text: 'Chapter'),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  children: [
-                    if (oldTestamentBooks.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
-                        child: Text(
-                          'OLD TESTAMENT',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 2.2,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        itemCount: oldTestamentBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = oldTestamentBooks[index];
-                          final isSelected = book['book_id'] == _selectedBook?['book_id'];
-                          return _buildBookItem(book, isSelected, theme);
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                    if (newTestamentBooks.isNotEmpty) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, top: 8, bottom: 8),
-                        child: Text(
-                          'NEW TESTAMENT',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 2.2,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        itemCount: newTestamentBooks.length,
-                        itemBuilder: (context, index) {
-                          final book = newTestamentBooks[index];
-                          final isSelected = book['book_id'] == _selectedBook?['book_id'];
-                          return _buildBookItem(book, isSelected, theme);
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-                _isLoadingChapters
-                    ? const Center(child: CircularProgressIndicator())
-                    : _chaptersCount == 0
-                        ? const Center(child: Text('Select a book first.'))
-                        : GridView.builder(
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 5,
-                              childAspectRatio: 1.0,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                            ),
-                            itemCount: _chaptersCount,
-                            itemBuilder: (context, index) {
-                              final chapterNum = index + 1;
-                              final isSelected = _selectedBook?['book_id'] == widget.initialBook?['book_id'] &&
-                                  chapterNum == widget.initialChapter;
-                              return ElevatedButton(
-                                onPressed: () {
-                                  widget.onSelectionComplete(_selectedBook!, chapterNum);
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSelected
-                                      ? theme.colorScheme.primary
-                                      : (theme.brightness == Brightness.dark
-                                          ? const Color(0xFF3A3B3C)
-                                          : const Color(0xFFE4E6EB)),
-                                  foregroundColor: isSelected
-                                      ? Colors.white
-                                      : (theme.brightness == Brightness.dark
-                                          ? Colors.white
-                                          : Colors.black87),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                ),
-                                child: Text(
-                                  '$chapterNum',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBookItem(Map<String, String> book, bool isSelected, ThemeData theme) {
-    return ElevatedButton(
-      onPressed: () => _onBookSelected(book),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected
-            ? theme.colorScheme.primary.withValues(alpha: 0.1)
-            : (theme.brightness == Brightness.dark
-                ? const Color(0xFF3A3B3C)
-                : const Color(0xFFE4E6EB)),
-        foregroundColor: isSelected
-            ? theme.colorScheme.primary
-            : (theme.brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black87),
-        side: isSelected
-            ? BorderSide(color: theme.colorScheme.primary, width: 1.5)
-            : null,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: EdgeInsets.zero,
-      ),
-      child: Text(
-        book['book_name'] ?? '',
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-const Set<String> _newTestamentBookIds = {
-  'MT', 'MK', 'LK', 'JN', 'AC', 'RM', 'C1', 'C2', 'GL', 'EP', 'PP', 'CL',
-  'H1', 'H2', 'T1', 'T2', 'TT', 'PM', 'HB', 'JM', 'P1', 'P2', 'J1', 'J2', 'J3', 'JD', 'RV'
-};

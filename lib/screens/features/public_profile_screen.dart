@@ -7,6 +7,9 @@ import '../../widgets/community_post_card.dart';
 import '../../models/blog_post.dart';
 import '../../services/user_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/database_helper.dart';
+import '../../models/center_model.dart';
+import '../details/center_detail_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
 
@@ -178,6 +181,298 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     }
   }
 
+  void _showFullScreenImageViewer(
+    BuildContext context, {
+    required String imageUrl,
+    required String title,
+  }) {
+    if (imageUrl.trim().isEmpty) return;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.94),
+      builder: (dialogContext) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.black.withValues(alpha: 0.4),
+            foregroundColor: Colors.white,
+            elevation: 0,
+            title: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.8,
+              maxScale: 4.0,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+                errorWidget: (context, url, error) => const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+                      SizedBox(height: 8),
+                      Text('Unable to load photo', style: TextStyle(color: Colors.white70)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openCenterDetail(
+    BuildContext context,
+    String centerName,
+    String centerAddress,
+  ) async {
+    try {
+      final allCenters = await DatabaseHelper.getAllCenters();
+      final match = allCenters.firstWhere(
+        (c) => c.name.trim().toLowerCase() == centerName.trim().toLowerCase(),
+        orElse: () => CenterModel(
+          name: centerName,
+          address: centerAddress,
+          district: '',
+          area: '',
+          location: '',
+          contact: '',
+          status: 'Active',
+          history: '',
+          page: '',
+        ),
+      );
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CenterDetailScreen(center: match),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error opening center detail: $e');
+    }
+  }
+
+  String _extractShortAddress(String rawAddress) {
+    final clean = rawAddress.trim();
+    if (clean.isEmpty) return 'Center';
+    final parts = clean.split(',');
+    if (parts.isNotEmpty && parts.first.trim().isNotEmpty) {
+      return parts.first.trim();
+    }
+    return clean;
+  }
+
+  void _showAllVisitedCentersSheet(
+    BuildContext context, {
+    required List<Map<String, dynamic>> visits,
+    required String memberName,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (context, scrollController) {
+            return SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  // Top Drag Handle Pill
+                  Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.dividerColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+
+                  // Header Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Visited Centers',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${visits.length}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(color: theme.dividerColor, height: 1),
+
+                  // List of Centers
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      itemCount: visits.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final visit = visits[index];
+                        final centerName =
+                            (visit['centerName'] as String?)?.trim() ??
+                                'Worship Center';
+                        final centerAddress =
+                            (visit['centerAddress'] as String?)?.trim() ?? '';
+                        final dynamic timestamp = visit['visitedAt'];
+                        String dateStr = '';
+                        if (timestamp is Timestamp) {
+                          final dt = timestamp.toDate();
+                          final months = [
+                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                          ];
+                          dateStr =
+                              'Visited on ${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+                        }
+
+                        return Card(
+                          margin: EdgeInsets.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(
+                              color: theme.dividerColor.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: theme.colorScheme.primary
+                                  .withValues(alpha: 0.1),
+                              child: Icon(
+                                Icons.place_rounded,
+                                color: theme.colorScheme.primary,
+                                size: 20,
+                              ),
+                            ),
+                            title: Text(
+                              centerName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            subtitle: (centerAddress.isNotEmpty ||
+                                    dateStr.isNotEmpty)
+                                ? Text(
+                                    [
+                                      if (centerAddress.isNotEmpty)
+                                        centerAddress,
+                                      if (dateStr.isNotEmpty) dateStr,
+                                    ].join(' • '),
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: theme.textTheme.bodySmall?.color,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  )
+                                : null,
+                            trailing: const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 20,
+                            ),
+                            onTap: () {
+                              Navigator.of(sheetContext).pop();
+                              _openCenterDetail(
+                                context,
+                                centerName,
+                                centerAddress,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -254,26 +549,35 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               clipBehavior: Clip.none,
               children: [
                 // Cover photo container
-                Container(
-                  height: 300,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: coverUrl == null || coverUrl.isEmpty
-                        ? LinearGradient(
-                            colors: [
-                              theme.colorScheme.primary,
-                              theme.colorScheme.primary.withValues(alpha: 0.8),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                GestureDetector(
+                  onTap: coverUrl != null && coverUrl.isNotEmpty
+                      ? () => _showFullScreenImageViewer(
+                            context,
+                            imageUrl: coverUrl,
+                            title: '$displayName\'s Cover Photo',
                           )
-                        : null,
-                    image: coverUrl != null && coverUrl.isNotEmpty
-                        ? DecorationImage(
-                            image: CachedNetworkImageProvider(coverUrl),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
+                      : null,
+                  child: Container(
+                    height: 300,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: coverUrl == null || coverUrl.isEmpty
+                          ? LinearGradient(
+                              colors: [
+                                theme.colorScheme.primary,
+                                theme.colorScheme.primary.withValues(alpha: 0.8),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      image: coverUrl != null && coverUrl.isNotEmpty
+                          ? DecorationImage(
+                              image: CachedNetworkImageProvider(coverUrl),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
                   ),
                 ),
 
@@ -283,32 +587,42 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   left: 0,
                   right: 0,
                   child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: theme.scaffoldBackgroundColor,
-                          width: 4.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
+                    child: GestureDetector(
+                      onTap: avatarUrl != null && avatarUrl.isNotEmpty
+                          ? () => _showFullScreenImageViewer(
+                                context,
+                                imageUrl: avatarUrl,
+                                title: '$displayName\'s Profile Photo',
+                              )
+                          : null,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: theme.scaffoldBackgroundColor,
+                            width: 4.5,
                           ),
-                        ],
-                      ),
-                      child: UserAvatar(
-                        authorName: displayName,
-                        avatarUrl: avatarUrl,
-                        radius: 64,
-                        backgroundColor: isDark
-                            ? const Color(0xFF3A3B3C)
-                            : const Color(0xFFE4E6EB),
-                        textStyle: TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: UserAvatar(
+                          authorName: displayName,
+                          avatarUrl: avatarUrl,
+                          radius: 64,
+                          borderRadius: BorderRadius.circular(28),
+                          backgroundColor: isDark
+                              ? const Color(0xFF3A3B3C)
+                              : const Color(0xFFE4E6EB),
+                          textStyle: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -534,135 +848,349 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ]
                   // UNLOCKED / PUBLIC PROFILE VIEW
                   else ...[
-                    // Personal Details Section (Grouped Card List Style)
+                    // Personal Details Section
                     Text(
-                      'Personal Details',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                      'PERSONAL DETAILS',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11.5,
+                        letterSpacing: 0.8,
+                        color: theme.textTheme.bodySmall?.color,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Card(
-                      color: theme.cardColor,
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: theme.dividerColor),
+                    const SizedBox(height: 6),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
                       ),
-                      child: Column(
-                        children: [
-                          ListTile(
-                            leading: const Icon(Icons.person_rounded),
-                            title: Text(
-                              displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                            subtitle: const Text(
-                              'Name',
-                              style: TextStyle(fontSize: 12),
-                            ),
+                      title: Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        'Name',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ),
+                    if (position.isNotEmpty)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        title: Text(
+                          position,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
-                          if (position.isNotEmpty) ...[
-                            Divider(color: theme.dividerColor, height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.military_tech_outlined),
-                              title: Text(
-                                position,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'Position / Role',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ],
+                        ),
+                        subtitle: Text(
+                          'Position / Role',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     Divider(color: theme.dividerColor, height: 1),
                     const SizedBox(height: 20),
 
-                    // Dedicated "Center" Section (Grouped Card List Style)
+                    // Dedicated "Center" Section
                     Text(
-                      'Center',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                      'CENTER',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11.5,
+                        letterSpacing: 0.8,
+                        color: theme.textTheme.bodySmall?.color,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Card(
-                      color: theme.cardColor,
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: theme.dividerColor),
+                    const SizedBox(height: 6),
+                    if (localCenter.isNotEmpty)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        title: Text(
+                          localCenter,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Local Center',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
                       ),
-                      child: Column(
-                        children: [
-                          if (localCenter.isNotEmpty)
-                            ListTile(
-                              leading: const Icon(Icons.church_rounded),
-                              title: Text(
-                                localCenter,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'Local Center',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          if (district.isNotEmpty || area.isNotEmpty) ...[
-                            if (localCenter.isNotEmpty)
-                              Divider(color: theme.dividerColor, height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.map_rounded),
-                              title: Text(
-                                [
-                                  if (district.isNotEmpty) district,
-                                  if (area.isNotEmpty) area,
-                                ].join(' • '),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'District & Area',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                          if (centerAddress.isNotEmpty) ...[
-                            Divider(color: theme.dividerColor, height: 1),
-                            ListTile(
-                              leading: const Icon(Icons.place_rounded),
-                              title: Text(
-                                centerAddress,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              subtitle: const Text(
-                                'Worships at',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ),
-                          ],
-                        ],
+                    if (district.isNotEmpty || area.isNotEmpty)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        title: Text(
+                          [
+                            if (district.isNotEmpty) district,
+                            if (area.isNotEmpty) area,
+                          ].join(' • '),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'District & Area',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
                       ),
+                    if (centerAddress.isNotEmpty)
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 2,
+                        ),
+                        title: Text(
+                          centerAddress,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Worships at',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+
+                    // Visited Centers Subsection
+                    Builder(
+                      builder: (context) {
+                        final targetEmail = widget.userEmail.isNotEmpty
+                            ? widget.userEmail
+                            : (_userData?['email'] as String? ?? '');
+                        return StreamBuilder<List<Map<String, dynamic>>>(
+                          stream: FirestoreService()
+                              .streamUserVisitedCenters(targetEmail),
+                          builder: (context, snapshot) {
+                            final visits = snapshot.data ?? [];
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            'VISITED CENTERS',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 11.5,
+                                              letterSpacing: 0.8,
+                                              color: theme
+                                                  .textTheme.bodySmall?.color,
+                                            ),
+                                          ),
+                                          if (visits.isNotEmpty) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: theme.colorScheme.primary
+                                                    .withValues(alpha: 0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Text(
+                                                '${visits.length}',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      if (visits.length > 3)
+                                        InkWell(
+                                          borderRadius: BorderRadius.circular(8),
+                                          onTap: () =>
+                                              _showAllVisitedCentersSheet(
+                                            context,
+                                            visits: visits,
+                                            memberName: displayName,
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                              vertical: 2,
+                                            ),
+                                            child: Text(
+                                              'View All',
+                                              style: TextStyle(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.primary,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (visits.isEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                      vertical: 4,
+                                    ),
+                                    child: Text(
+                                      'No visited centers recorded yet.',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontStyle: FontStyle.italic,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      for (int i = 0; i < 4; i++)
+                                        if (i < visits.length)
+                                          Expanded(
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              onTap: () {
+                                                final visit = visits[i];
+                                                _openCenterDetail(
+                                                  context,
+                                                  (visit['centerName']
+                                                              as String?)
+                                                          ?.trim() ??
+                                                      'Center',
+                                                  (visit['centerAddress']
+                                                              as String?)
+                                                          ?.trim() ??
+                                                      '',
+                                                );
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  vertical: 6,
+                                                  horizontal: 2,
+                                                ),
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    CircleAvatar(
+                                                      radius: 24,
+                                                      backgroundColor: isDark
+                                                          ? const Color(
+                                                              0xFF3A3B3C)
+                                                          : const Color(
+                                                              0xFFE4E6EB),
+                                                      child: Icon(
+                                                        Icons.church_rounded,
+                                                        size: 22,
+                                                        color: theme
+                                                            .colorScheme
+                                                            .primary,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 6),
+                                                    Text(
+                                                      (visits[i]['centerName']
+                                                                  as String?)
+                                                              ?.trim() ??
+                                                          'Center',
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: theme
+                                                            .textTheme
+                                                            .bodyLarge
+                                                            ?.color,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow
+                                                          .ellipsis,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      _extractShortAddress(
+                                                        (visits[i]['centerAddress']
+                                                                as String?) ??
+                                                            '',
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: theme
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.color,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow
+                                                          .ellipsis,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                        else
+                                          const Expanded(child: SizedBox()),
+                                    ],
+                                  ),
+                              ],
+                            );
+                          },
+                        );
+                      },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
                     Divider(color: theme.dividerColor, height: 1),
                     const SizedBox(height: 20),
 

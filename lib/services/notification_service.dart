@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'user_service.dart';
+import 'notifications_settings_service.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -22,7 +26,8 @@ class NotificationService {
   Future<void> init() async {
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = (await FlutterTimezone.getLocalTimezone()).identifier;
+      final localTz = await FlutterTimezone.getLocalTimezone();
+      final String timeZoneName = localTz.identifier;
       tz.setLocalLocation(tz.getLocation(timeZoneName));
     } catch (e) {
       debugPrint("Could not set local location, defaulting to Asia/Manila: $e");
@@ -51,6 +56,58 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.initialize(
         settings: initializationSettings,
       );
+
+      // Create Android Notification Channels explicitly with MAX importance
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+
+      if (androidImplementation != null) {
+        await androidImplementation.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'daily_prayer_reminder',
+            'Daily Evening Prayer Reminder (6:00 PM)',
+            description: 'Daily reminder at 6:00 PM to pray',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+        await androidImplementation.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'daily_morning_prayer',
+            'Daily Morning Prayer Reminder (6:00 AM)',
+            description: 'Daily reminder at 6:00 AM to pray',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+        await androidImplementation.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'sunday_worship_reminder',
+            'Sunday Worship Reminder (8:00 AM)',
+            description: 'Weekly reminder on Sundays to worship and serve',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+        await androidImplementation.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'community_posts_channel',
+            'Community Posts',
+            description:
+                'Notifications for new posts shared in the community feed',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+      }
+
       _isInitialized = true;
       debugPrint("✅ NotificationService initialized successfully");
     } catch (e) {
@@ -87,25 +144,22 @@ class NotificationService {
 
   Future<void> scheduleDailyPrayerReminder() async {
     if (!_isInitialized) return;
-    // Request permissions just in case
     await requestPermissions();
-
-    // Cancel any existing daily prayer reminder notification to prevent duplicates
     await _flutterLocalNotificationsPlugin.cancel(id: 0);
 
-    final tz.TZDateTime scheduledDate = _nextInstanceOfFiveFiftyPM();
+    final tz.TZDateTime scheduledDate = _nextInstanceOfSixPM();
 
     try {
       await _flutterLocalNotificationsPlugin.zonedSchedule(
-        id: 0, // Notification ID
-        title: 'Orasen ti Kararag', // Title
-        body: 'Ayaten nga kakabsat orasen nga agkararag apagsipnget', // Body
+        id: 0,
+        title: 'Orasen ti Kararag',
+        body: 'Ayaten nga kakabsat orasen nga agkararag apagsipnget',
         scheduledDate: scheduledDate,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_prayer_reminder',
-            'Daily Prayer Reminder',
-            channelDescription: 'Daily reminder at 5:50 PM to pray',
+            'Daily Evening Prayer Reminder (6:00 PM)',
+            channelDescription: 'Daily reminder at 6:00 PM to pray',
             importance: Importance.max,
             priority: Priority.high,
             largeIcon: DrawableResourceAndroidBitmap('brand_mark'),
@@ -117,17 +171,17 @@ class NotificationService {
         matchDateTimeComponents: DateTimeComponents.time,
       );
       debugPrint(
-        "🔔 Scheduled daily prayer notification for 17:50 (5:50 PM). Next occurrence: $scheduledDate",
+        "🔔 Scheduled daily evening prayer notification for 18:00 (6:00 PM). Next occurrence: $scheduledDate",
       );
     } catch (e) {
-      debugPrint("❌ Failed to schedule daily prayer reminder: $e");
+      debugPrint("❌ Failed to schedule daily evening prayer reminder: $e");
     }
   }
 
-  tz.TZDateTime _nextInstanceOfFiveFiftyPM() {
+  tz.TZDateTime _nextInstanceOfSixPM() {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, 17, 50);
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, 18, 0);
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
@@ -149,15 +203,17 @@ class NotificationService {
 
     try {
       await _flutterLocalNotificationsPlugin.zonedSchedule(
-        id: 1, // Sunday Reminder ID
-        title: 'Orasen ti Panagdayaw', // Title
-        body: 'Ayaten nga kakabsat, Domingo manen, orasen ti panagserbi ken panagdayaw iti Dios.', // Body
+        id: 1,
+        title: 'Orasen ti Panagdayaw',
+        body:
+            'Ayaten nga kakabsat, Domingo manen, orasen ti panagserbi ken panagdayaw iti Dios.',
         scheduledDate: scheduledDate,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'sunday_worship_reminder',
-            'Sunday Worship Reminder',
-            channelDescription: 'Weekly reminder on Sundays to worship and serve',
+            'Sunday Worship Reminder (8:00 AM)',
+            channelDescription:
+                'Weekly reminder on Sundays to worship and serve',
             importance: Importance.max,
             priority: Priority.high,
             largeIcon: DrawableResourceAndroidBitmap('brand_mark'),
@@ -172,7 +228,7 @@ class NotificationService {
         "🔔 Scheduled weekly Sunday worship notification. Next occurrence: $scheduledDate",
       );
     } catch (e) {
-      debugPrint("❌ Failed to schedule Sunday reminder: $e");
+      debugPrint("❌ Failed to schedule Sunday worship reminder: $e");
     }
   }
 
@@ -207,7 +263,7 @@ class NotificationService {
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_prayer_reminder',
-          'Daily Prayer Reminder',
+          'Daily Evening Prayer Reminder (6:00 PM)',
           channelDescription: 'Daily reminder at 6:00 PM to pray',
           importance: Importance.max,
           priority: Priority.high,
@@ -226,11 +282,12 @@ class NotificationService {
     await _flutterLocalNotificationsPlugin.show(
       id: 98,
       title: 'Orasen ti Panagdayaw (Test)',
-      body: 'Ayaten nga kakabsat, Domingo manen, orasen ti panagserbi ken panagdayaw iti Dios.',
+      body:
+          'Ayaten nga kakabsat, Domingo manen, orasen ti panagserbi ken panagdayaw iti Dios.',
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'sunday_worship_reminder',
-          'Sunday Worship Reminder',
+          'Sunday Worship Reminder (8:00 AM)',
           channelDescription: 'Weekly reminder on Sundays to worship and serve',
           importance: Importance.max,
           priority: Priority.high,
@@ -252,14 +309,15 @@ class NotificationService {
 
     try {
       await _flutterLocalNotificationsPlugin.zonedSchedule(
-        id: 2, // Morning Reminder ID
-        title: 'Kararag ti Bigat', // Title
-        body: 'Ayaten nga kakabsat, umayen ti lawag ti bigat, orasen ti agkararag ken agyaman.', // Body
+        id: 2,
+        title: 'Kararag ti Bigat',
+        body:
+            'Ayaten nga kakabsat, umayen ti lawag ti bigat, orasen ti agkararag ken agyaman.',
         scheduledDate: scheduledDate,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'daily_morning_prayer',
-            'Daily Morning Prayer',
+            'Daily Morning Prayer Reminder (6:00 AM)',
             channelDescription: 'Daily reminder at 6:00 AM to pray',
             importance: Importance.max,
             priority: Priority.high,
@@ -316,5 +374,102 @@ class NotificationService {
       ),
     );
     debugPrint("🔔 Triggered instant morning test notification");
+  }
+
+  StreamSubscription? _postsSubscription;
+  DateTime _listeningStartTime = DateTime.now();
+
+  void startListeningToNewCommunityPosts() {
+    _postsSubscription?.cancel();
+    _listeningStartTime = DateTime.now();
+
+    _postsSubscription = FirebaseFirestore.instance
+        .collection('community_posts')
+        .where('timestamp', isGreaterThan: _listeningStartTime)
+        .snapshots()
+        .listen(
+      (snapshot) {
+        for (final change in snapshot.docChanges) {
+          if (change.type == DocumentChangeType.added) {
+            final data = change.doc.data();
+            if (data == null) continue;
+
+            final authorEmail = (data['authorEmail'] as String?)?.trim() ?? '';
+            final currentUserEmail = UserService.instance.value.email.trim();
+
+            // Do not notify if the current user authored this post
+            if (currentUserEmail.isNotEmpty &&
+                authorEmail.isNotEmpty &&
+                authorEmail.toLowerCase() == currentUserEmail.toLowerCase()) {
+              continue;
+            }
+
+            final authorName = (data['author'] as String?)?.trim() ?? 'A member';
+            final content = (data['content'] as String?)?.trim() ?? '';
+
+            showNewPostNotification(
+              author: authorName,
+              content: content,
+              postId: change.doc.id,
+            );
+          }
+        }
+      },
+      onError: (e) {
+        debugPrint("Error listening to new community posts: $e");
+      },
+    );
+    debugPrint("🔔 Started listening to new community posts for notifications");
+  }
+
+  void stopListeningToNewCommunityPosts() {
+    _postsSubscription?.cancel();
+    _postsSubscription = null;
+    debugPrint("🔔 Stopped listening to new community posts");
+  }
+
+  Future<void> showNewPostNotification({
+    required String author,
+    required String content,
+    String? postId,
+  }) async {
+    if (!_isInitialized) return;
+    if (!NotificationsSettingsService.instance.value) return;
+
+    await requestPermissions();
+
+    final cleanSnippet = content.trim().replaceAll('\n', ' ');
+    final displayBody = cleanSnippet.length > 80
+        ? '${cleanSnippet.substring(0, 80)}...'
+        : cleanSnippet;
+
+    final int notificationId =
+        DateTime.now().millisecondsSinceEpoch % 100000 + 100;
+
+    try {
+      await _flutterLocalNotificationsPlugin.show(
+        id: notificationId,
+        title: '$author shared a new post',
+        body: displayBody.isNotEmpty
+            ? displayBody
+            : 'Tap to view the new community post.',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'community_posts_channel',
+            'Community Posts',
+            channelDescription:
+                'Notifications for new posts shared in the community feed',
+            importance: Importance.max,
+            priority: Priority.high,
+            largeIcon: DrawableResourceAndroidBitmap('brand_mark'),
+            color: Color(0xFF1A73E8),
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+      );
+      debugPrint("🔔 Triggered new post notification for post by $author");
+    } catch (e) {
+      debugPrint("❌ Failed to show new post notification: $e");
+    }
   }
 }

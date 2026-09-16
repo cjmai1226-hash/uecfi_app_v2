@@ -312,8 +312,10 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
         24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: SingleChildScrollView(
-        child: Form(
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Form(
           key: _formKey,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -421,6 +423,7 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

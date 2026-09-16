@@ -99,6 +99,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -219,6 +220,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: theme.scaffoldBackgroundColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -352,12 +354,17 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Text(
-                                                  comment.author,
-                                                  style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                    fontSize: 12,
+                                                Flexible(
+                                                  child: Text(
+                                                    comment.author,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 12,
+                                                    ),
                                                   ),
                                                 ),
                                                 if (comment.author
@@ -412,66 +419,69 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                       },
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _commentInputController,
-                            decoration: InputDecoration(
-                              hintText: 'Write a comment...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide.none,
-                              ),
-                              filled: true,
-                              fillColor: isDark
-                                  ? const Color(0xFF2A2B2C)
-                                  : const Color(0xFFEAEBED),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _commentInputController,
+                              decoration: InputDecoration(
+                                hintText: 'Write a comment...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
+                                filled: true,
+                                fillColor: isDark
+                                    ? const Color(0xFF2A2B2C)
+                                    : const Color(0xFFEAEBED),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(
-                            Icons.send_rounded,
-                            color: theme.colorScheme.primary,
-                          ),
-                          onPressed: () async {
-                            final text = _commentInputController.text.trim();
-                            if (text.isEmpty) return;
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              Icons.send_rounded,
+                              color: theme.colorScheme.primary,
+                            ),
+                            onPressed: () async {
+                              final text = _commentInputController.text.trim();
+                              if (text.isEmpty) return;
 
-                            _commentInputController.clear();
-                            FocusScope.of(context).unfocus();
+                              _commentInputController.clear();
+                              FocusScope.of(context).unfocus();
 
-                            if (_post.id is String) {
-                              try {
-                                await FirestoreService().addComment(
-                                  postId: _post.id.toString(),
-                                  content: text,
-                                  authorEmail: currentUser.email,
-                                  authorNickname: userNickname,
-                                  avatarUrl: currentUser.avatarUrl,
-                                );
-                                setState(() {
-                                  _post.commentsCount++;
-                                });
-                                setModalState(() {});
-                              } catch (e) {
-                                debugPrint('Error adding comment: $e');
+                              if (_post.id is String) {
+                                try {
+                                  await FirestoreService().addComment(
+                                    postId: _post.id.toString(),
+                                    content: text,
+                                    authorEmail: currentUser.email,
+                                    authorNickname: userNickname,
+                                    avatarUrl: currentUser.avatarUrl,
+                                  );
+                                  setState(() {
+                                    _post.commentsCount++;
+                                  });
+                                  setModalState(() {});
+                                } catch (e) {
+                                  debugPrint('Error adding comment: $e');
+                                }
                               }
-                            }
-                          },
-                        ),
-                      ],
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -486,6 +496,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return ValueListenableBuilder<UserProfile>(
       valueListenable: UserService.instance,
@@ -499,19 +510,23 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
 
         return Container(
           width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: theme.cardColor,
-            border: Border(
-              top: BorderSide(
-                color: theme.dividerColor.withValues(alpha: 0.6),
-                width: 1,
-              ),
-              bottom: BorderSide(
-                color: theme.dividerColor.withValues(alpha: 0.8),
-                width: 1,
-              ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.dividerColor,
+              width: 1.2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.35)
+                    : Colors.black.withValues(alpha: 0.035),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -520,7 +535,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 6,
                 ),
                 leading: GestureDetector(
                   onTap: () => _openMemberProfile(
@@ -548,12 +563,17 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                     authorEmail: _post.authorEmail,
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        _post.author,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                      Flexible(
+                        child: Text(
+                          _post.author,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                       if (_post.author.toLowerCase() == 'devchristian') ...[
@@ -608,32 +628,41 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
 
               // Post Body Content
               if (postGradient != null && !isLong)
-                Container(
-                  width: double.infinity,
-                  constraints: const BoxConstraints(minHeight: 180),
+                Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 36,
+                    horizontal: 12,
+                    vertical: 4,
                   ),
-                  decoration: BoxDecoration(
-                    gradient: postGradient.gradient,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    _post.content,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      height: 1.4,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black38,
-                          blurRadius: 4,
-                          offset: Offset(0, 1),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(minHeight: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 32,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: postGradient.gradient,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        _post.content,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          height: 1.4,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black38,
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 )
@@ -645,24 +674,25 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                   ),
                   child: ExpandableText(
                     text: _post.content,
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       fontSize: 14.5,
-                      height: 1.4,
+                      height: 1.45,
+                      color: theme.textTheme.bodyLarge?.color,
                     ),
                   ),
                 ),
 
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
 
-              // Bottom Action Bar (Heart & Comments)
+              // Bottom Action Bar (Accenture Styled Pill Buttons)
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
+                  horizontal: 16,
+                  vertical: 8,
                 ),
                 child: Row(
                   children: [
-                    // Like icon + count
+                    // Like Pill Button
                     InkWell(
                       onTap: () {
                         setState(() {
@@ -679,10 +709,16 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                         }
                       },
                       borderRadius: BorderRadius.circular(20),
-                      child: Padding(
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 14,
                           vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _post.isLiked
+                              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                              : theme.dividerColor.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -691,9 +727,9 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                               _post.isLiked
                                   ? Icons.favorite_rounded
                                   : Icons.favorite_border_rounded,
-                              size: 21,
+                              size: 18,
                               color: _post.isLiked
-                                  ? Colors.redAccent
+                                  ? theme.colorScheme.primary
                                   : theme.textTheme.bodySmall?.color,
                             ),
                             const SizedBox(width: 6),
@@ -701,31 +737,37 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                               '${_post.likesCount}',
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: theme.textTheme.bodySmall?.color,
+                                fontWeight: FontWeight.bold,
+                                color: _post.isLiked
+                                    ? theme.colorScheme.primary
+                                    : theme.textTheme.bodySmall?.color,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 10),
 
-                    // Comment icon + count
+                    // Comment Pill Button
                     InkWell(
                       onTap: () => _showCommentsBottomSheet(context),
                       borderRadius: BorderRadius.circular(20),
-                      child: Padding(
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
+                          horizontal: 14,
                           vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.dividerColor.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.chat_bubble_outline_rounded,
-                              size: 20,
+                              size: 17,
                               color: theme.textTheme.bodySmall?.color,
                             ),
                             const SizedBox(width: 6),
@@ -733,7 +775,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                               '${_post.commentsCount}',
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.bold,
                                 color: theme.textTheme.bodySmall?.color,
                               ),
                             ),
@@ -745,7 +787,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                 ),
               ),
 
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
             ],
           ),
         );

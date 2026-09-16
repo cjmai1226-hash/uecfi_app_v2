@@ -321,6 +321,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguageBottomSheet() {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -334,48 +335,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
               {'code': 'TAG', 'name': 'Tagalog (TAG)'},
             ];
             
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Prayer Language',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Prayer Language',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ...options.map((opt) {
-                    final code = opt['code']!;
-                    final name = opt['name']!;
-                    final isSelected = code == currentLang;
-                    
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        Icons.translate_rounded,
-                        color: isSelected ? theme.colorScheme.primary : theme.hintColor,
-                      ),
-                      title: Text(
-                        name,
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    const SizedBox(height: 16),
+                    ...options.map((opt) {
+                      final code = opt['code']!;
+                      final name = opt['name']!;
+                      final isSelected = code == currentLang;
+
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          name,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
-                      ),
-                      trailing: isSelected
-                          ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
-                          : null,
-                      onTap: () {
-                        PrayerLanguageService.instance.setLanguage(code);
-                        setState(() {});
-                        setModalState(() {});
-                        Navigator.pop(context);
-                      },
-                    );
-                  }),
-                ],
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
+                            : null,
+                        onTap: () {
+                          PrayerLanguageService.instance.setLanguage(code);
+                          setState(() {});
+                          setModalState(() {});
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                ),
               ),
             );
           },
@@ -388,6 +388,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showAppearanceBottomSheet() {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -396,53 +397,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
           builder: (context, setModalState) {
             final theme = Theme.of(context);
             final modes = ['system', 'light', 'dark'];
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Appearance Mode',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Appearance Mode',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  ...modes.map((mode) {
-                    final isSelected = mode == _selectedThemeMode;
-                    final label = mode[0].toUpperCase() + mode.substring(1);
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        mode == 'dark'
-                            ? Icons.dark_mode_rounded
-                            : mode == 'light'
-                                ? Icons.light_mode_rounded
-                                : Icons.brightness_auto_rounded,
-                        color: isSelected ? theme.colorScheme.primary : theme.hintColor,
-                      ),
-                      title: Text(
-                        label,
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    const SizedBox(height: 16),
+                    ...modes.map((mode) {
+                      final isSelected = mode == _selectedThemeMode;
+                      final label = mode[0].toUpperCase() + mode.substring(1);
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          label,
+                          style: TextStyle(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
-                      ),
-                      trailing: isSelected
-                          ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
-                          : null,
-                      onTap: () {
-                        final themeMode = _parseStringToThemeMode(mode);
-                        ThemeService.instance.setThemeMode(themeMode);
-                        setState(() {
-                          _selectedThemeMode = mode;
-                        });
-                        setModalState(() {});
-                        Navigator.pop(context);
-                      },
-                    );
-                  }),
-                ],
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
+                            : null,
+                        onTap: () {
+                          final themeMode = _parseStringToThemeMode(mode);
+                          ThemeService.instance.setThemeMode(themeMode);
+                          setState(() {
+                            _selectedThemeMode = mode;
+                          });
+                          setModalState(() {});
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                ),
               ),
             );
           },
@@ -472,43 +468,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
 
     Widget buildSectionHeader(String title) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 8, top: 16, bottom: 8),
-          child: Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodySmall?.color,
-            ),
+      return Padding(
+        padding: const EdgeInsets.only(left: 8, top: 16, bottom: 6),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 11.5,
+            letterSpacing: 0.8,
+            color: theme.textTheme.bodySmall?.color,
           ),
         ),
       );
     }
 
     Widget buildSettingsRow({
-      required IconData icon,
       required String title,
       Widget? subtitle,
       Widget? trailing,
       VoidCallback? onTap,
     }) {
       return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         onTap: onTap,
-        leading: Icon(
-          icon,
-          size: 22,
-          color: theme.brightness == Brightness.dark
-              ? Colors.white70
-              : Colors.black87,
-        ),
         title: Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         subtitle: subtitle,
-        trailing: trailing,
+        trailing: trailing ??
+            Icon(
+              Icons.chevron_right_rounded,
+              color: theme.hintColor,
+              size: 20,
+            ),
       );
     }
 
@@ -523,185 +516,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             buildSectionHeader('Preferences'),
-            Card(
-              color: theme.cardColor,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.dividerColor),
-              ),
-              child: Column(
-                children: [
-                  // Prayer Language Selector row
-                  ValueListenableBuilder<String>(
-                    valueListenable: PrayerLanguageService.instance,
-                    builder: (context, langCode, child) {
-                      return buildSettingsRow(
-                        icon: Icons.translate_rounded,
-                        title: 'Prayer Language',
-                        subtitle: Text(
-                          langCode == 'TAG' ? 'Tagalog (TAG)' : 'Ilocano (ILO)',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        trailing: Icon(
-                          Icons.chevron_right_rounded,
-                          color: theme.hintColor,
-                        ),
-                        onTap: _showLanguageBottomSheet,
-                      );
-                    },
+            ValueListenableBuilder<String>(
+              valueListenable: PrayerLanguageService.instance,
+              builder: (context, langCode, child) {
+                return buildSettingsRow(
+                  title: 'Prayer Language',
+                  subtitle: Text(
+                    langCode == 'TAG' ? 'Tagalog (TAG)' : 'Ilocano (ILO)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
                   ),
-                  Divider(color: theme.dividerColor, height: 1),
-
-                  // App Notifications Switch row
-                  ValueListenableBuilder<bool>(
-                    valueListenable: NotificationsSettingsService.instance,
-                    builder: (context, enabled, child) {
-                      return buildSettingsRow(
-                        icon: Icons.notifications_rounded,
-                        title: 'App Notifications',
-                        subtitle: Text(
-                          enabled ? 'Enabled' : 'Disabled',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        trailing: Switch(
-                          value: enabled,
-                          onChanged: (val) {
-                            NotificationsSettingsService.instance
-                                .setNotificationsEnabled(val);
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                  onTap: _showLanguageBottomSheet,
+                );
+              },
             ),
+            ValueListenableBuilder<bool>(
+              valueListenable: NotificationsSettingsService.instance,
+              builder: (context, enabled, child) {
+                return buildSettingsRow(
+                  title: 'App Notifications',
+                  subtitle: Text(
+                    enabled ? 'Enabled' : 'Disabled',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+                  trailing: Switch(
+                    value: enabled,
+                    onChanged: (val) {
+                      NotificationsSettingsService.instance
+                          .setNotificationsEnabled(val);
+                    },
+                  ),
+                );
+              },
+            ),
+
             const SizedBox(height: 8),
+            Divider(color: theme.dividerColor, height: 1),
 
             buildSectionHeader('Appearance'),
-            Card(
-              color: theme.cardColor,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.dividerColor),
+            buildSettingsRow(
+              title: 'Appearance',
+              subtitle: Text(
+                _selectedThemeMode[0].toUpperCase() +
+                    _selectedThemeMode.substring(1),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: theme.textTheme.bodySmall?.color,
+                ),
               ),
-              child: Column(
-                children: [
-                  buildSettingsRow(
-                    icon: Icons.dark_mode_rounded,
-                    title: 'Appearance',
-                    subtitle: Text(
-                      _selectedThemeMode[0].toUpperCase() +
-                          _selectedThemeMode.substring(1),
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.hintColor,
-                    ),
-                    onTap: _showAppearanceBottomSheet,
-                  ),
-                ],
-              ),
+              onTap: _showAppearanceBottomSheet,
             ),
+
             const SizedBox(height: 8),
+            Divider(color: theme.dividerColor, height: 1),
 
             buildSectionHeader('Account'),
-            Card(
-              color: theme.cardColor,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.dividerColor),
+            buildSettingsRow(
+              title: 'Recover Profile',
+              subtitle: Text(
+                'Restore your profile details from the cloud',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.textTheme.bodySmall?.color,
+                ),
               ),
-              child: Column(
-                children: [
-                  buildSettingsRow(
-                    icon: Icons.cloud_download_rounded,
-                    title: 'Recover Profile',
-                    subtitle: const Text(
-                      'Restore your profile details from the cloud',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.hintColor,
-                    ),
-                    onTap: _showRecoverProfileDialog,
-                  ),
-                ],
-              ),
+              onTap: _showRecoverProfileDialog,
             ),
+
             const SizedBox(height: 8),
+            Divider(color: theme.dividerColor, height: 1),
 
             buildSectionHeader('Legal & About'),
-            Card(
-              color: theme.cardColor,
-              clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: theme.dividerColor),
+            buildSettingsRow(
+              title: 'Terms of Service',
+              onTap: () => _showFeatureDialog(
+                'Terms of Service',
+                'Welcome to UECFI APP. By using this application, you agree to comply with and be bound by our terms of service, ensuring respectful communication and appropriate content sharing.',
               ),
-              child: Column(
-                children: [
-                  buildSettingsRow(
-                    icon: Icons.description_outlined,
-                    title: 'Terms of Service',
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.hintColor,
-                    ),
-                    onTap: () => _showFeatureDialog(
-                      'Terms of Service',
-                      'Welcome to UECFI APP. By using this application, you agree to comply with and be bound by our terms of service, ensuring respectful communication and appropriate content sharing.',
-                    ),
-                  ),
-                  Divider(color: theme.dividerColor, height: 1),
-                  buildSettingsRow(
-                    icon: Icons.privacy_tip_outlined,
-                    title: 'Privacy Policy',
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.hintColor,
-                    ),
-                    onTap: () => _showFeatureDialog(
-                      'Privacy Policy',
-                      'Your privacy is important to us. UECFI APP secures your profile information and local storage details. We do not sell or distribute user data to third parties.',
-                    ),
-                  ),
-                  Divider(color: theme.dividerColor, height: 1),
-                  buildSettingsRow(
-                    icon: Icons.group_outlined,
-                    title: 'Community Standards',
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.hintColor,
-                    ),
-                    onTap: () => _showFeatureDialog(
-                      'Community Standards',
-                      'UECFI APP is built on love, faith, and fellowship. We expect all community members to post supportive material, refrain from hate speech, and follow church guiding principles.',
-                    ),
-                  ),
-                  Divider(color: theme.dividerColor, height: 1),
-                  buildSettingsRow(
-                    icon: Icons.info_outline_rounded,
-                    title: 'About',
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: theme.hintColor,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const AboutScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+            ),
+            buildSettingsRow(
+              title: 'Privacy Policy',
+              onTap: () => _showFeatureDialog(
+                'Privacy Policy',
+                'Your privacy is important to us. UECFI APP secures your profile information and local storage details. We do not sell or distribute user data to third parties.',
               ),
+            ),
+            buildSettingsRow(
+              title: 'Community Standards',
+              onTap: () => _showFeatureDialog(
+                'Community Standards',
+                'UECFI APP is built on love, faith, and fellowship. We expect all community members to post supportive material, refrain from hate speech, and follow church guiding principles.',
+              ),
+            ),
+            buildSettingsRow(
+              title: 'About',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AboutScreen(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 40),

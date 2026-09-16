@@ -40,12 +40,13 @@ class _PrayersScreenState extends State<PrayersScreen> {
     }
   }
 
-  /// Truncate long content string for preview display
-  String _getContentPreview(String content) {
-    if (content.trim().isEmpty) return 'No preview available.';
-    final cleanText = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (cleanText.length <= 100) return cleanText;
-    return '${cleanText.substring(0, 100)}...';
+  String _capitalizeTitle(String text) {
+    if (text.trim().isEmpty) return 'Untitled Prayer';
+    final words = text.trim().split(RegExp(r'\s+'));
+    return words.map((w) {
+      if (w.isEmpty) return '';
+      return w[0].toUpperCase() + w.substring(1).toLowerCase();
+    }).join(' ');
   }
 
   @override
@@ -101,24 +102,52 @@ class _PrayersScreenState extends State<PrayersScreen> {
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Text(
-                                    title.isNotEmpty ? title : 'Untitled Prayer',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontSize: 16,
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Capitalized Prayer Title
+                                        Text(
+                                          _capitalizeTitle(title),
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontSize: 15.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        if (content.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+
+                                          // Content Preview (1 Maxline)
+                                          Text(
+                                            content
+                                                .replaceAll(
+                                                    RegExp(r'\s+'), ' ')
+                                                .trim(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme
+                                                .textTheme.bodyMedium
+                                                ?.copyWith(
+                                              fontSize: 13,
+                                              color: theme.textTheme
+                                                  .bodySmall?.color,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
+                                  const SizedBox(width: 10),
 
-                                  // Content Preview
-                                  Text(
-                                    _getContentPreview(content),
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      height: 1.4,
-                                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
-                                    ),
+                                  // Trailing Chevron Icon
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: theme.hintColor,
+                                    size: 22,
                                   ),
                                 ],
                               ),

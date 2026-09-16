@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 import '../../models/user_profile.dart';
 import '../../services/firestore_service.dart';
-import '../../widgets/feed_composer_card.dart';
 import '../features/create_post_screen.dart';
 import '../../models/blog_post.dart';
 import '../../widgets/community_post_card.dart';
@@ -107,28 +106,60 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Post Composer Card (Edge-to-Edge)
-                  FeedComposerCard(
-                    placeholderTemplate: "What's on your mind, {name}?",
-                    icon: Icons.send_rounded,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CreatePostScreen(),
-                        ),
-                      ).then((_) => _fetchPosts());
-                    },
-                  ),
-
-                  // Community Feed Header
+                  // Community Feed Header with Trailing Create Post Button
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-                    child: Text(
-                      'Community Feed',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Community Feed',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const CreatePostScreen(),
+                              ),
+                            ).then((_) => _fetchPosts());
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.add_rounded,
+                                  size: 18,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Create Post',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/database_helper.dart';
 import '../../models/song_model.dart';
-import '../../widgets/feed_composer_card.dart';
 import 'bookmarks_screen.dart';
 import 'submit_song_screen.dart';
 import '../details/song_detail_screen.dart';
@@ -42,29 +41,6 @@ class _SongsScreenState extends State<SongsScreen> {
     }
   }
 
-  /// Truncate long content string for preview display
-  String _getContentPreview(String content) {
-    if (content.trim().isEmpty) return 'No preview available.';
-    final cleanText = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (cleanText.length <= 100) return cleanText;
-    return '${cleanText.substring(0, 100)}...';
-  }
-
-  Widget _buildSongComposerCard(ThemeData theme) {
-    return FeedComposerCard(
-      placeholderTemplate: 'Submit a song or hymn, {name}...',
-      icon: Icons.queue_music_rounded,
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SubmitSongScreen(),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -77,8 +53,60 @@ class _SongsScreenState extends State<SongsScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: _buildSongComposerCard(theme),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Hymns & Songs',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SubmitSongScreen(),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.add_rounded,
+                                  size: 18,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Submit Song',
+                                  style: TextStyle(
+                                    color: theme.colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 if (_songs.isEmpty)
@@ -125,104 +153,104 @@ class _SongsScreenState extends State<SongsScreen> {
                               },
                               child: Padding(
                                 padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                song.title.isNotEmpty
-                                                    ? song.title
-                                                    : 'Untitled Song',
-                                                style: theme
-                                                    .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                  fontSize: 16,
-                                                ),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          // Chords Badge
+                                          if (song.hasChords) ...[
+                                            Container(
+                                              padding: const EdgeInsets
+                                                  .symmetric(
+                                                horizontal: 8,
+                                                vertical: 3,
                                               ),
-                                              if (song.author.isNotEmpty) ...[
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'By ${song.author}',
-                                                  style: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                    fontStyle: FontStyle.italic,
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-
-                                        // Trailing Chords Pill Badge
-                                        if (song.hasChords)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.secondary
-                                                  .withValues(alpha: 0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              border: Border.all(
+                                              decoration: BoxDecoration(
                                                 color: theme
-                                                    .colorScheme
-                                                    .secondary
-                                                    .withValues(alpha: 0.3),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.music_note_rounded,
-                                                  size: 14,
+                                                    .colorScheme.secondary
+                                                    .withValues(alpha: 0.12),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                border: Border.all(
                                                   color: theme
-                                                      .colorScheme
-                                                      .secondary,
+                                                      .colorScheme.secondary
+                                                      .withValues(alpha: 0.25),
+                                                  width: 1,
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  'Chords',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize:
+                                                    MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons
+                                                        .music_note_rounded,
+                                                    size: 12,
                                                     color: theme
                                                         .colorScheme
                                                         .secondary,
                                                   ),
-                                                ),
-                                              ],
+                                                  const SizedBox(width: 2),
+                                                  Text(
+                                                    'Chords',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: theme
+                                                          .colorScheme
+                                                          .secondary,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 6),
+                                          ],
+
+                                          // Song Title
+                                          Text(
+                                            song.title.isNotEmpty
+                                                ? song.title
+                                                : 'Untitled Song',
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                              fontSize: 15.5,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
+                                          if (song.content.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
 
-                                    // Content Preview
-                                    Text(
-                                      _getContentPreview(song.content),
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                        height: 1.4,
-                                        color: theme.textTheme.bodyMedium
-                                            ?.color
-                                            ?.withValues(alpha: 0.8),
+                                            // Lyrics Content Snippet (1 Maxline)
+                                            Text(
+                                              song.content
+                                                  .replaceAll(
+                                                      RegExp(r'\s+'), ' ')
+                                                  .trim(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.bodyMedium
+                                                  ?.copyWith(
+                                                fontSize: 13,
+                                                color: theme.textTheme
+                                                    .bodySmall?.color,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
+                                    ),
+                                    const SizedBox(width: 10),
+
+                                    // Trailing Chevron Icon
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: theme.hintColor,
+                                      size: 22,
                                     ),
                                   ],
                                 ),

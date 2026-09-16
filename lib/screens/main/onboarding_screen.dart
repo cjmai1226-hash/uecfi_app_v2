@@ -60,11 +60,58 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    final uniqueNum = DateTime.now().millisecondsSinceEpoch
-        .toString()
-        .substring(7);
-    _memberIdController.text = 'USER$uniqueNum';
-    _positionController.text = 'Member';
+    final existing = UserService.instance.value;
+    if (existing.memberId.isNotEmpty) {
+      _memberIdController.text = existing.memberId;
+    } else {
+      final uniqueNum = DateTime.now().millisecondsSinceEpoch
+          .toString()
+          .substring(7);
+      _memberIdController.text = 'USER$uniqueNum';
+    }
+
+    if (existing.nickname.isNotEmpty && existing.nickname != 'Member') {
+      _nicknameController.text = existing.nickname;
+    }
+    if (existing.firstName.isNotEmpty) {
+      _firstNameController.text = existing.firstName;
+    }
+    if (existing.middleName.isNotEmpty) {
+      _middleNameController.text = existing.middleName;
+    }
+    if (existing.lastName.isNotEmpty) {
+      _lastNameController.text = existing.lastName;
+    }
+    if (existing.email.isNotEmpty) {
+      _emailController.text = existing.email;
+    }
+    if (existing.position.isNotEmpty) {
+      _positionController.text = existing.position;
+    } else {
+      _positionController.text = 'Member';
+    }
+
+    if (existing.district.isNotEmpty && existing.district != 'Default District') {
+      _districtController.text = existing.district;
+      _selectedDistrict = existing.district;
+    }
+    if (existing.localCenter.isNotEmpty && existing.localCenter != 'MAIN CENTER') {
+      _localCenterController.text = existing.localCenter;
+    }
+    if (existing.centerAddress.isNotEmpty) {
+      _centerAddressController.text = existing.centerAddress;
+    }
+    if (existing.area.isNotEmpty && existing.area != 'Default Area') {
+      _areaController.text = existing.area;
+      if (_areaDropdownOptions.contains(existing.area)) {
+        _selectedAreaDropdown = existing.area;
+        _isManualArea = false;
+      } else {
+        _selectedAreaDropdown = 'Custom / Enter Manually';
+        _isManualArea = true;
+      }
+    }
+
     _loadDatabaseData();
   }
 
@@ -75,6 +122,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _districts = districts;
         _isLoadingDb = false;
       });
+
+      if (_selectedDistrict != null && _selectedDistrict!.isNotEmpty) {
+        if (_districts.contains(_selectedDistrict)) {
+          final centers = await DatabaseHelper.getCentersForDistrict(_selectedDistrict!);
+          setState(() {
+            _centerOptions = centers;
+            if (_localCenterController.text.isNotEmpty) {
+              try {
+                _selectedCenter = centers.firstWhere(
+                  (c) => c.name.toLowerCase() == _localCenterController.text.toLowerCase(),
+                );
+              } catch (_) {}
+            }
+          });
+        } else {
+          setState(() {
+            _isManualDistrict = true;
+            _isManualCenter = true;
+          });
+        }
+      }
     } catch (e) {
       setState(() {
         _isLoadingDb = false;
@@ -164,20 +232,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _onFinishOnboarding() async {
-    final nickname = _nicknameController.text.trim().isEmpty
-        ? 'Member'
-        : _nicknameController.text.trim();
+    final nickname = _nicknameController.text.trim();
     final email = _emailController.text.trim();
 
-    final district = _districtController.text.trim().isEmpty
-        ? 'Default District'
-        : _districtController.text.trim();
-    final area = _areaController.text.trim().isEmpty
-        ? 'Default Area'
-        : _areaController.text.trim();
-    final localCenter = _localCenterController.text.trim().isEmpty
-        ? 'MAIN CENTER'
-        : _localCenterController.text.trim().toUpperCase();
+    final district = _districtController.text.trim();
+    final area = _areaController.text.trim();
+    final localCenter = _localCenterController.text.trim().toUpperCase();
     final centerAddress = _centerAddressController.text.trim();
     final memberId = _memberIdController.text.trim();
     final firstName = _firstNameController.text.trim();
@@ -528,12 +588,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _nicknameController,
+            maxLength: 25,
             decoration: const InputDecoration(
               hintText: 'e.g. Hermano. John, Hermana Mary',
+              counterText: '',
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) {
                 return 'Please enter your preferred nickname';
+              }
+              if (val.trim().length > 25) {
+                return 'Nickname must be 25 characters or less';
               }
               return null;
             },
@@ -653,6 +718,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             TextFormField(
               controller: _districtController,
               decoration: const InputDecoration(hintText: 'e.g. District 1'),
+              validator: (val) {
+                if (val == null ||
+                    val.trim().isEmpty ||
+                    val.trim().toLowerCase() == 'default district') {
+                  return 'Please enter your district';
+                }
+                return null;
+              },
             )
           else
             DropdownButtonFormField<String>(
@@ -660,6 +733,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               isExpanded: true,
               hint: const Text('Select District'),
               decoration: const InputDecoration(),
+              validator: (val) {
+                if (val == null ||
+                    val.trim().isEmpty ||
+                    val == 'Other / Enter Manually') {
+                  return 'Please select a district';
+                }
+                return null;
+              },
               items: [
                 ..._districts.map(
                   (d) => DropdownMenuItem(
@@ -727,6 +808,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ? 'Select a District first or enter manually'
                     : 'e.g. Central Worship Center',
               ),
+              validator: (val) {
+                if (val == null ||
+                    val.trim().isEmpty ||
+                    val.trim().toUpperCase() == 'MAIN CENTER') {
+                  return 'Please enter your local center';
+                }
+                return null;
+              },
             )
           else
             DropdownButtonFormField<CenterModel>(
@@ -734,6 +823,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               isExpanded: true,
               hint: const Text('Select Local Center'),
               decoration: const InputDecoration(),
+              validator: (val) {
+                if (val == null) {
+                  return 'Please select your local center';
+                }
+                return null;
+              },
               items: isDistrictSelected
                   ? _centerOptions.map((center) {
                       return DropdownMenuItem<CenterModel>(
@@ -820,6 +915,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               isExpanded: true,
               hint: const Text('Select Area (1 - 6)'),
               decoration: const InputDecoration(),
+              validator: (val) {
+                if (val == null ||
+                    val.trim().isEmpty ||
+                    val == 'Custom / Enter Manually') {
+                  return 'Please select an area';
+                }
+                return null;
+              },
               items: isDistrictSelected
                   ? _areaDropdownOptions.map((opt) {
                       return DropdownMenuItem<String>(
@@ -838,6 +941,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               decoration: const InputDecoration(
                 hintText: 'e.g. Area 7, North Sector',
               ),
+              validator: (val) {
+                if (val == null ||
+                    val.trim().isEmpty ||
+                    val.trim().toLowerCase() == 'default area') {
+                  return 'Please enter your area';
+                }
+                return null;
+              },
             ),
           ],
           const SizedBox(height: 16),

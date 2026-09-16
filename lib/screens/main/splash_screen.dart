@@ -44,8 +44,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) {
         await UserService.instance.loadProfile();
         final profile = UserService.instance.value;
-        final hasCompletedOnboarding =
-            profile.nickname.isNotEmpty && profile.email.isNotEmpty;
+        final hasCompletedOnboarding = profile.isProperlyOnboarded;
 
         if (!mounted) return;
 
@@ -151,7 +150,9 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                       const SizedBox(height: 8),
                       Image.asset(
-                        'assets/images/logotext_mark1.png',
+                        theme.brightness == Brightness.dark
+                            ? 'assets/images/darkmode_mark.png'
+                            : 'assets/images/lightmode_mark.png',
                         height: 26,
                         fit: BoxFit.contain,
                       ),

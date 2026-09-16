@@ -127,6 +127,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
                   final docs = snapshot.data?.docs ?? [];
 
+                  int? userRank;
+                  int userPts = currentUser.contributions;
+                  final currentUserEmail = currentUser.email.trim().toLowerCase();
+                  final currentUserName = currentUser.nickname.trim().toLowerCase();
+
+                  for (int i = 0; i < docs.length; i++) {
+                    final data = docs[i].data() as Map<String, dynamic>;
+                    final email = (data['email'] as String?)?.trim().toLowerCase() ?? '';
+                    final name = (data['name'] as String?)?.trim().toLowerCase() ?? '';
+                    if ((currentUserEmail.isNotEmpty && email == currentUserEmail) ||
+                        (currentUserName.isNotEmpty && name == currentUserName)) {
+                      userRank = i + 1;
+                      userPts = data['contributions'] as int? ?? userPts;
+                      break;
+                    }
+                  }
+
                   final top3Docs = docs.take(3).toList();
                   final restDocs = docs.length > 3
                       ? docs.sublist(3)
@@ -135,22 +152,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       ? 97
                       : restDocs.length;
 
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Header Banner with Accenture Tech Gradient
-                        _buildHeroBanner(context, theme),
+                  return Stack(
+                    children: [
+                      SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 100),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Header Banner with Accenture Tech Gradient
+                            _buildHeroBanner(context, theme),
 
-                        // Visual Top 3 Championship Podium
-                        if (docs.isNotEmpty)
-                          _buildPodiumSection(
-                            context,
-                            theme,
-                            top3Docs,
-                            currentUser,
-                          ),
+                            // Visual Top 3 Championship Podium (Directly below Hero Banner)
+                            if (docs.isNotEmpty)
+                              _buildPodiumSection(
+                                context,
+                                theme,
+                                top3Docs,
+                                currentUser,
+                              ),
 
                         // Section Title for Remaining Ranks
                         if (restDocs.isNotEmpty) ...[
@@ -190,7 +210,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                         as Map<String, dynamic>;
                                 final String name = data['name'] ?? 'Member';
                                 final String localCenter =
-                                    data['centerName'] ?? '';
+                                    data['centerName'] ??
+                                    data['localCenter'] ??
+                                    '';
                                 final int contributions =
                                     data['contributions'] as int? ?? 0;
                                 final String email = data['email'] ?? '';
@@ -439,7 +461,24 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         ],
                       ],
                     ),
-                  );
+                  ),
+
+                  // Floating User Standing Card at bottom (for both ranked and unranked users)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 16,
+                    child: _buildFloatingUserStandingCard(
+                      context: context,
+                      theme: theme,
+                      currentUser: currentUser,
+                      userRank: userRank,
+                      userPts: userPts,
+                      isDark: isDark,
+                    ),
+                  ),
+                ],
+              );
                 },
               ),
             );
@@ -539,6 +578,241 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     );
   }
 
+  Widget _buildFloatingUserStandingCard({
+    required BuildContext context,
+    required ThemeData theme,
+    required UserProfile currentUser,
+    required int? userRank,
+    required int userPts,
+    required bool isDark,
+  }) {
+    final bool isRanked = userRank != null && userPts > 0;
+
+    // Accent colors and styling based on rank
+    final Color borderColor;
+
+    if (!isRanked) {
+      borderColor = isDark ? const Color(0xFF3A3B4C) : const Color(0xFFE2E2EC);
+    } else if (userRank == 1) {
+      borderColor = const Color(0xFFFFD700).withValues(alpha: 0.85);
+    } else if (userRank == 2) {
+      borderColor = const Color(0xFFC0C0C0).withValues(alpha: 0.85);
+    } else if (userRank == 3) {
+      borderColor = const Color(0xFFCD7F32).withValues(alpha: 0.85);
+    } else {
+      borderColor = theme.colorScheme.primary.withValues(alpha: 0.45);
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E2A) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: borderColor,
+          width: isRanked && userRank <= 3 ? 1.5 : 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isRanked && userRank == 1
+                ? const Color(0xFFFFD700).withValues(alpha: isDark ? 0.25 : 0.15)
+                : Colors.black.withValues(alpha: isDark ? 0.45 : 0.12),
+            blurRadius: 18,
+            spreadRadius: 1,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () {
+            if (!isRanked) {
+              _showMechanicsBottomSheet(context, theme);
+            } else {
+              _openMemberProfile(
+                context,
+                currentUser.nickname,
+                currentUser.email,
+                currentUser.avatarPath,
+                currentUser.localCenter,
+              );
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                // Clean Avatar (no # badge since "Your Rank: #X" is displayed in the title)
+                if (!isRanked)
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      UserAvatar(
+                        authorName: currentUser.nickname,
+                        localAvatarPath: currentUser.avatarPath,
+                        radius: 20,
+                      ),
+                      Positioned(
+                        bottom: -3,
+                        right: -3,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4.5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF4A4A5E)
+                                : const Color(0xFF78788C),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF1E1E2A)
+                                  : Colors.white,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Text(
+                            'UR',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  UserAvatar(
+                    authorName: currentUser.nickname,
+                    localAvatarPath: currentUser.avatarPath,
+                    radius: 20,
+                  ),
+                const SizedBox(width: 12),
+
+                // Text details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              isRanked
+                                  ? 'Your Rank: #$userRank'
+                                  : 'You are Unranked',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isRanked
+                                    ? (userRank == 1
+                                        ? (isDark
+                                            ? const Color(0xFFFFD700)
+                                            : const Color(0xFFB8860B))
+                                        : theme.colorScheme.primary)
+                                    : (isDark
+                                        ? const Color(0xFFF5F5FA)
+                                        : const Color(0xFF0E0E14)),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isRanked) ...[
+                            const SizedBox(width: 4),
+                            getContributorBadge(userPts, theme, size: 14),
+                          ] else ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '0 PTS',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isRanked
+                            ? '$userPts contribution pts earned this season'
+                            : 'Tap to learn how to contribute & get ranked',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Trailing Action / Points Pill
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isRanked
+                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                        : theme.colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        isRanked ? '$userPts pts' : 'Rank Up',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: isRanked
+                              ? theme.colorScheme.primary
+                              : Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        size: 16,
+                        color: isRanked
+                            ? theme.colorScheme.primary
+                            : Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPodiumSection(
     BuildContext context,
     ThemeData theme,
@@ -608,7 +882,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }) {
     final name = data['name'] ?? 'Member';
     final contributions = data['contributions'] as int? ?? 0;
-    final String localCenter = data['centerName'] ?? '';
+    final String localCenter =
+        data['centerName'] ?? data['localCenter'] ?? '';
     final isDevChristian = name.toLowerCase() == 'devchristian';
     final bool isSelf =
         data['email']?.toString().toLowerCase() ==
@@ -689,9 +964,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               alignment: Alignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(2),
+                  padding: const EdgeInsets.all(2.5),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(rank == 1 ? 14 : 13),
                     gradient: LinearGradient(
                       colors: gradientColors,
                       begin: Alignment.topLeft,
@@ -711,6 +986,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     localAvatarPath: isSelf ? currentUser.avatarPath : null,
                     avatarUrl: data['avatarUrl'] as String?,
                     radius: rank == 1 ? 24 : 22,
+                    borderRadius: BorderRadius.circular(rank == 1 ? 11.5 : 10.5),
                     backgroundColor: theme.cardColor,
                     textStyle: TextStyle(
                       fontSize: rank == 1 ? 18 : 16,
@@ -902,211 +1178,224 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   void _showMechanicsBottomSheet(BuildContext context, ThemeData theme) {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Leaderboard Mechanics',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Earn points and level up your contributor status by helping grow and maintain the UECFI member community app!',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withValues(
-                      alpha: 0.8,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Point breakdown
-                Text(
-                  'How to Earn Points',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildMechanicRow(
-                  icon: Icons.post_add_rounded,
-                  title: 'Publish a Feed Post',
-                  subtitle: '+1 point per published post',
-                  theme: theme,
-                ),
-                _buildMechanicRow(
-                  icon: Icons.music_note_rounded,
-                  title: 'Suggest Song Lyrics',
-                  subtitle: '+1 point per song suggested',
-                  theme: theme,
-                ),
-                _buildMechanicRow(
-                  icon: Icons.edit_location_alt_rounded,
-                  title: 'Suggest Center Details',
-                  subtitle: '+1 point per update suggestion',
-                  theme: theme,
-                ),
-                const SizedBox(height: 24),
-
-                // Medal breakdown
-                Text(
-                  'Contributor Medal Tiers',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildMedalRow(
-                  icon: Icons.workspace_premium_rounded,
-                  color: Colors.blueGrey[400]!,
-                  title: 'Active Contributor',
-                  requirement: '10+ contribution points',
-                  theme: theme,
-                ),
-                _buildMedalRow(
-                  icon: Icons.stars_rounded,
-                  color: Colors.orange[600]!,
-                  title: 'Top Contributor',
-                  requirement: '50+ contribution points',
-                  theme: theme,
-                ),
-                _buildMedalRow(
-                  icon: Icons.military_tech_rounded,
-                  color: Colors.amber[700]!,
-                  title: 'Pillar of the Community',
-                  requirement: '100+ contribution points',
-                  theme: theme,
-                ),
-                const SizedBox(height: 24),
-
-                // Rewards breakdown
-                Text(
-                  '🏆 Season Contributor Rewards',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Text.rich(
-                    TextSpan(
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(
-                          alpha: 0.85,
+        final isDark = theme.brightness == Brightness.dark;
+        return SafeArea(
+          top: false,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Leaderboard Mechanics',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      children: const [
-                        TextSpan(
-                          text:
-                              'Top contributors of each season may receive special rewards and recognition from ',
-                        ),
-                        TextSpan(
-                          text: 'devchristian',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        TextSpan(
-                          text:
-                              ' as a token of appreciation for their valuable contributions to the UECFI App.\n\nKeep contributing, keep helping the community, and you might be one of our next Top Contributors!\n\nCheck our official Facebook page for season announcements, reward details, and guidelines.',
-                        ),
-                      ],
-                    ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: () => _launchFacebookPage(context),
-                  borderRadius: BorderRadius.circular(14),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1877F2).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: const Color(0xFF1877F2).withValues(alpha: 0.3),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Earn points and level up your contributor status by helping grow and maintain the UECFI member community app!',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.8,
                       ),
                     ),
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1877F2),
-                            shape: BoxShape.circle,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Point breakdown
+                  Text(
+                    'How to Earn Points',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMechanicRow(
+                    icon: Icons.post_add_rounded,
+                    title: 'Publish a Feed Post',
+                    subtitle: '+1 point per published post',
+                    theme: theme,
+                  ),
+                  _buildMechanicRow(
+                    icon: Icons.music_note_rounded,
+                    title: 'Suggest Song Lyrics',
+                    subtitle: '+1 point per song suggested',
+                    theme: theme,
+                  ),
+                  _buildMechanicRow(
+                    icon: Icons.edit_location_alt_rounded,
+                    title: 'Suggest Center Details',
+                    subtitle: '+1 point per update suggestion',
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Medal breakdown
+                  Text(
+                    'Contributor Medal Tiers',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMedalRow(
+                    icon: Icons.remove_circle_outline_rounded,
+                    color: isDark ? const Color(0xFF9E9EAF) : const Color(0xFF6E6E82),
+                    title: 'Unranked',
+                    requirement: '0 contribution points (contribute to get ranked)',
+                    theme: theme,
+                  ),
+                  _buildMedalRow(
+                    icon: Icons.workspace_premium_rounded,
+                    color: Colors.blueGrey[400]!,
+                    title: 'Active Contributor',
+                    requirement: '10+ contribution points',
+                    theme: theme,
+                  ),
+                  _buildMedalRow(
+                    icon: Icons.stars_rounded,
+                    color: Colors.orange[600]!,
+                    title: 'Top Contributor',
+                    requirement: '50+ contribution points',
+                    theme: theme,
+                  ),
+                  _buildMedalRow(
+                    icon: Icons.military_tech_rounded,
+                    color: Colors.amber[700]!,
+                    title: 'Pillar of the Community',
+                    requirement: '100+ contribution points',
+                    theme: theme,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Rewards breakdown
+                  Text(
+                    '🏆 Season Contributor Rewards',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Text.rich(
+                      TextSpan(
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          height: 1.5,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.85,
                           ),
-                          child: const Icon(
-                            Icons.facebook,
-                            color: Colors.white,
+                        ),
+                        children: const [
+                          TextSpan(
+                            text:
+                                'Top contributors of each season may receive special rewards and recognition from ',
+                          ),
+                          TextSpan(
+                            text: 'devchristian',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          TextSpan(
+                            text:
+                                ' as a token of appreciation for their valuable contributions to the UECFI App.\n\nKeep contributing, keep helping the community, and you might be one of our next Top Contributors!\n\nCheck our official Facebook page for season announcements, reward details, and guidelines.',
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => _launchFacebookPage(context),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1877F2).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: const Color(0xFF1877F2).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF1877F2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.facebook,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Follow us on Facebook',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: Color(0xFF1877F2),
+                                  ),
+                                ),
+                                Text(
+                                  'Tap to visit official page',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFF1877F2),
                             size: 20,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Follow us on Facebook',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Color(0xFF1877F2),
-                                ),
-                              ),
-                              Text(
-                                'Tap to visit official page',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Color(0xFF1877F2),
-                          size: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: Text(
-                    'Disclaimer: Google is not a sponsor of or involved in this community recognition program.',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontSize: 10.5,
-                      fontStyle: FontStyle.italic,
-                      color: theme.textTheme.bodySmall?.color?.withValues(
-                        alpha: 0.6,
+                        ],
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-              ],
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      'Disclaimer: Google is not a sponsor of or involved in this community recognition program.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 10.5,
+                        fontStyle: FontStyle.italic,
+                        color: theme.textTheme.bodySmall?.color?.withValues(
+                          alpha: 0.6,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         );
