@@ -44,7 +44,8 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) {
         await UserService.instance.loadProfile();
         final profile = UserService.instance.value;
-        final hasCompletedOnboarding = profile.isProperlyOnboarded;
+        final hasCompletedOnboarding =
+            profile.nickname.isNotEmpty && profile.email.isNotEmpty;
 
         if (!mounted) return;
 

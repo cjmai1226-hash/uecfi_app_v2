@@ -8,8 +8,6 @@ import '../features/leaderboard_screen.dart';
 import '../features/menu_screen.dart';
 import '../features/search_screen.dart';
 import '../../services/ad_service.dart';
-import '../../services/user_service.dart';
-import 'onboarding_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -35,14 +33,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !UserService.instance.value.isProperlyOnboarded) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-          (route) => false,
-        );
-      }
-    });
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() {
       // Rebuild to update selected tab icon states (filled vs outlined)

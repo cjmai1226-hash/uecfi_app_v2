@@ -56,10 +56,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   bool _isManualArea = false;
   bool _isLoadingDb = true;
   bool _hasAcceptedTerms = false;
+  final ScrollController _termsScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _termsScrollController.addListener(_onTermsScroll);
     final existing = UserService.instance.value;
     if (existing.memberId.isNotEmpty) {
       _memberIdController.text = existing.memberId;
@@ -91,11 +93,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _positionController.text = 'Member';
     }
 
-    if (existing.district.isNotEmpty && existing.district != 'Default District') {
+    if (existing.district.isNotEmpty &&
+        existing.district != 'Default District') {
       _districtController.text = existing.district;
       _selectedDistrict = existing.district;
     }
-    if (existing.localCenter.isNotEmpty && existing.localCenter != 'MAIN CENTER') {
+    if (existing.localCenter.isNotEmpty &&
+        existing.localCenter != 'MAIN CENTER') {
       _localCenterController.text = existing.localCenter;
     }
     if (existing.centerAddress.isNotEmpty) {
@@ -125,13 +129,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
       if (_selectedDistrict != null && _selectedDistrict!.isNotEmpty) {
         if (_districts.contains(_selectedDistrict)) {
-          final centers = await DatabaseHelper.getCentersForDistrict(_selectedDistrict!);
+          final centers = await DatabaseHelper.getCentersForDistrict(
+            _selectedDistrict!,
+          );
           setState(() {
             _centerOptions = centers;
             if (_localCenterController.text.isNotEmpty) {
               try {
                 _selectedCenter = centers.firstWhere(
-                  (c) => c.name.toLowerCase() == _localCenterController.text.toLowerCase(),
+                  (c) =>
+                      c.name.toLowerCase() ==
+                      _localCenterController.text.toLowerCase(),
                 );
               } catch (_) {}
             }
@@ -147,6 +155,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() {
         _isLoadingDb = false;
       });
+    }
+  }
+
+  void _onTermsScroll() {
+    if (!_hasAcceptedTerms && _termsScrollController.hasClients) {
+      final position = _termsScrollController.position;
+      if (position.pixels >= (position.maxScrollExtent - 24)) {
+        setState(() {
+          _hasAcceptedTerms = true;
+        });
+      }
     }
   }
 
@@ -296,6 +315,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
+    _termsScrollController.removeListener(_onTermsScroll);
+    _termsScrollController.dispose();
     _pageController.dispose();
     _nicknameController.dispose();
     _firstNameController.dispose();
@@ -358,7 +379,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildTermsSlide(ThemeData theme) {
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -372,104 +393,170 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            'Please review and accept our guidelines before continuing.',
+            'Please review our guidelines below. Scroll to the bottom to continue.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.textTheme.bodySmall?.color,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Scrollable Card showing the Terms text
-          Container(
-            height: 320,
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.dividerColor, width: 1),
-            ),
-            child: Scrollbar(
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTermSection(
-                      title: '1. Acceptance of Terms',
-                      description:
-                          'By accessing and using this application, you accept and agree to be bound by the terms and provisions of this agreement.',
-                      theme: theme,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTermSection(
-                      title: '2. Purpose and Conduct',
-                      description:
-                          'This application is designed to foster community and spiritual growth. Users are expected to maintain respectful, appropriate, and constructive conduct in all interactions.',
-                      theme: theme,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTermSection(
-                      title: '3. User Submissions',
-                      description:
-                          'Any content submitted by users (such as posts, comments, or directory updates) must not be malicious, offensive, or infringe upon the rights of others.',
-                      theme: theme,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTermSection(
-                      title: '4. Privacy and Data',
-                      description:
-                          'We are committed to protecting your privacy. Personal information collected through forms or profiles will be used solely for community directory and application functionality purposes.',
-                      theme: theme,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTermSection(
-                      title: '5. Intellectual Property',
-                      description:
-                          'All content included on the app, such as text, graphics, logos, images, and software, is the property of the organization or its content suppliers.',
-                      theme: theme,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTermSection(
-                      title: '6. Disclaimer',
-                      description:
-                          'The application and its content are provided "as is". We make no warranties regarding the accuracy or completeness of the informational directories provided.',
-                      theme: theme,
-                    ),
-                  ],
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _hasAcceptedTerms
+                      ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                      : theme.dividerColor,
+                  width: 1,
+                ),
+              ),
+              child: Scrollbar(
+                controller: _termsScrollController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _termsScrollController,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTermSection(
+                        title: '1. Acceptance of Terms',
+                        description:
+                            'By accessing and using this application, you accept and agree to be bound by the terms and provisions of this agreement.',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermSection(
+                        title: '2. Purpose and Conduct',
+                        description:
+                            'This application is designed to foster community and spiritual growth. Users are expected to maintain respectful, appropriate, and constructive conduct in all interactions.',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermSection(
+                        title: '3. User Submissions',
+                        description:
+                            'Any content submitted by users (such as posts, comments, or directory updates) must not be malicious, offensive, or infringe upon the rights of others.',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermSection(
+                        title: '4. Privacy and Data',
+                        description:
+                            'We are committed to protecting your privacy. Personal information collected through forms or profiles will be used solely for community directory and application functionality purposes.',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermSection(
+                        title: '5. Intellectual Property',
+                        description:
+                            'All content included on the app, such as text, graphics, logos, images, and software, is the property of the organization or its content suppliers.',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildTermSection(
+                        title: '6. Disclaimer',
+                        description:
+                            'The application and its content are provided "as is". We make no warranties regarding the accuracy or completeness of the informational directories provided.',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _hasAcceptedTerms
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.1,
+                                  )
+                                : theme.dividerColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _hasAcceptedTerms
+                                    ? Icons.check_circle_rounded
+                                    : Icons.arrow_downward_rounded,
+                                size: 16,
+                                color: _hasAcceptedTerms
+                                    ? theme.colorScheme.primary
+                                    : theme.textTheme.bodySmall?.color,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _hasAcceptedTerms
+                                    ? 'Terms fully reviewed'
+                                    : 'End of Terms',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _hasAcceptedTerms
+                                      ? theme.colorScheme.primary
+                                      : theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
-
-          // Checkbox / Switch to Accept Terms
-          Row(
-            children: [
-              Checkbox(
-                value: _hasAcceptedTerms,
-                onChanged: (val) {
-                  setState(() {
-                    _hasAcceptedTerms = val ?? false;
-                  });
-                },
-                activeColor: theme.colorScheme.primary,
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _hasAcceptedTerms = !_hasAcceptedTerms;
-                    });
-                  },
-                  child: Text(
-                    'I accept and agree to the Terms & Agreements',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+          const SizedBox(height: 10),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 250),
+            crossFadeState: _hasAcceptedTerms
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.swipe_down_rounded,
+                  size: 14,
+                  color: theme.textTheme.bodySmall?.color,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Scroll to the bottom of the terms to Proceed',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            secondChild: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  size: 14,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'You may now proceed to get started',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -992,178 +1079,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildSummarySlide(ThemeData theme) {
-    final name = _nicknameController.text.trim().isEmpty
-        ? 'Member'
-        : _nicknameController.text.trim();
-    final district = _districtController.text.trim().isEmpty
-        ? 'Not specified'
-        : _districtController.text.trim();
-    final area = _areaController.text.trim().isEmpty
-        ? 'Not specified'
-        : _areaController.text.trim();
-    final center = _localCenterController.text.trim().isEmpty
-        ? 'Not specified'
-        : _localCenterController.text.trim().toUpperCase();
-    final address = _centerAddressController.text.trim().isEmpty
-        ? 'Not specified'
-        : _centerAddressController.text.trim();
-    final memberId = _memberIdController.text.trim();
-    final email = _emailController.text.trim();
-    final position = _positionController.text.trim().isEmpty
-        ? 'Member'
-        : _positionController.text.trim();
-    final firstName = _firstNameController.text.trim();
-    final middleName = _middleNameController.text.trim();
-    final lastName = _lastNameController.text.trim();
-    final fullName =
-        '$firstName ${middleName.isEmpty ? "" : "$middleName "}$lastName';
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.check_circle_rounded,
-              size: 56,
-              color: theme.colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'You are all set!',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Review your information below. You can update this anytime in settings.',
-            style: theme.textTheme.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-
-          // Summary Card (Flat Facebook Card Style)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.dividerColor, width: 1),
-            ),
-            child: Column(
-              children: [
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.badge_outlined,
-                  label: 'Member ID',
-                  value: memberId,
-                ),
-                Divider(color: theme.dividerColor, height: 24),
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.email_outlined,
-                  label: 'Email Address',
-                  value: email,
-                ),
-                Divider(color: theme.dividerColor, height: 24),
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.person_outline_rounded,
-                  label: 'Nickname',
-                  value: name,
-                ),
-                Divider(color: theme.dividerColor, height: 24),
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.person_rounded,
-                  label: 'Full Name',
-                  value: fullName,
-                ),
-                Divider(color: theme.dividerColor, height: 24),
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.map_outlined,
-                  label: 'District & Area',
-                  value: '$district • $area',
-                ),
-                Divider(color: theme.dividerColor, height: 24),
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.church_outlined,
-                  label: 'Local Center',
-                  value: center,
-                ),
-                if (address != 'Not specified') ...[
-                  Divider(color: theme.dividerColor, height: 24),
-                  _buildSummaryRow(
-                    theme: theme,
-                    icon: Icons.place_outlined,
-                    label: 'Center Address',
-                    value: address,
-                  ),
-                ],
-                Divider(color: theme.dividerColor, height: 24),
-                _buildSummaryRow(
-                  theme: theme,
-                  icon: Icons.work_outline_rounded,
-                  label: 'Position in Church',
-                  value: position,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow({
-    required ThemeData theme,
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.8),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: theme.textTheme.bodySmall),
-              Text(
-                value,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    const totalPages = 5;
+    const totalPages = 4;
     final isLastPage = _currentPage == totalPages - 1;
 
     return Scaffold(
@@ -1198,18 +1117,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Form(
                 key: _formKey,
                 child: PageView(
+                  physics: const NeverScrollableScrollPhysics(),
                   controller: _pageController,
                   onPageChanged: (index) {
                     setState(() {
                       _currentPage = index;
                     });
+                    if (index == 3 && !_hasAcceptedTerms) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_termsScrollController.hasClients &&
+                            _termsScrollController.position.maxScrollExtent <=
+                                0) {
+                          setState(() {
+                            _hasAcceptedTerms = true;
+                          });
+                        }
+                      });
+                    }
                   },
                   children: [
                     _buildWelcomeSlide(theme),
-                    _buildTermsSlide(theme),
                     _buildProfileSlide(theme),
                     _buildChurchInfoSlide(theme),
-                    _buildSummarySlide(theme),
+                    _buildTermsSlide(theme),
                   ],
                 ),
               ),
@@ -1248,10 +1178,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     width: double.infinity,
                     height: 50,
                     child: FilledButton(
-                      onPressed: (_currentPage == 1 && !_hasAcceptedTerms)
+                      onPressed: (_currentPage == 3 && !_hasAcceptedTerms)
                           ? null
                           : () async {
-                              if (_currentPage == 2) {
+                              if (_currentPage == 1) {
                                 if (!_formKey.currentState!.validate()) {
                                   return;
                                 }
@@ -1277,24 +1207,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 bool hasError = false;
 
                                 try {
-                                  final exists = await FirestoreService()
-                                      .checkNicknameExists(nickname);
-                                  if (exists) {
-                                    hasError = true;
-                                    navigator.pop(); // dismiss loading
-                                    messenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Nickname is already taken. Please choose a different one.',
+                                  final currentProfile =
+                                      UserService.instance.value;
+
+                                  if (nickname.isNotEmpty &&
+                                      nickname != currentProfile.nickname) {
+                                    final exists = await FirestoreService()
+                                        .checkNicknameExists(nickname);
+                                    if (exists) {
+                                      hasError = true;
+                                      navigator.pop(); // dismiss loading
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Nickname is already taken. Please choose a different one.',
+                                          ),
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.orangeAccent,
                                         ),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: Colors.orangeAccent,
-                                      ),
-                                    );
-                                    return;
+                                      );
+                                      return;
+                                    }
                                   }
 
-                                  if (email.isNotEmpty) {
+                                  if (email.isNotEmpty &&
+                                      email.toLowerCase() !=
+                                          currentProfile.email.toLowerCase()) {
                                     final emailExists = await FirestoreService()
                                         .checkEmailExists(email);
                                     if (emailExists) {
@@ -1321,7 +1259,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 if (!hasError) {
                                   navigator.pop(); // dismiss loading
                                 }
-                              } else if (_currentPage == 3) {
+                              } else if (_currentPage == 2) {
                                 if (!_formKey.currentState!.validate()) {
                                   return;
                                 }

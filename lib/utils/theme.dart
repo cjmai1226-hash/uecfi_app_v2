@@ -1,26 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/theme_service.dart';
+
+enum AppThemeColor {
+  electricViolet,
+  googleAI,
+}
 
 class AppTheme {
   static bool isDark = false;
 
-  // App brand colors: Inspired by Accenture Design System (Electric Violet, Cyber Accents & Deep Obsidian)
-  static Color get primaryColor => isDark ? const Color(0xFFA100FF) : const Color(0xFFA100FF);
-  static Color get secondaryColor => isDark ? const Color(0xFF00E5FF) : const Color(0xFF7500C0);
-  static Color get backgroundColor => isDark ? const Color(0xFF0D0D12) : const Color(0xFFF7F7FA);
-  static Color get cardColor => isDark ? const Color(0xFF16161F) : const Color(0xFFFFFFFF);
-  static Color get textColor => isDark ? const Color(0xFFF5F5FA) : const Color(0xFF0E0E14);
-  static Color get textSecondaryColor => isDark ? const Color(0xFF9E9EAF) : const Color(0xFF6E6E82);
-  static Color get borderLightColor => isDark ? const Color(0xFF262633) : const Color(0xFFE5E5ED);
+  static ThemeData get lightTheme =>
+      getLightTheme(ThemeService.instance.themeColor);
 
-  static ThemeData get lightTheme {
-    const primary = Color(0xFFA100FF); // Accenture Electric Violet
-    const secondary = Color(0xFF7500C0); // Deep Violet Accent
-    const background = Color(0xFFF7F7FA); // Architectural Studio Light Gray
-    const card = Color(0xFFFFFFFF);
-    const text = Color(0xFF0E0E14); // Ultra-crisp Onyx Text
-    const textSecondary = Color(0xFF6E6E82); // Refined Slate Gray Text
-    const borderLight = Color(0xFFE5E5ED); // Crisp High-Tech Border
+  static ThemeData get darkTheme =>
+      getDarkTheme(ThemeService.instance.themeColor);
+
+  static ThemeData getLightTheme([AppThemeColor colorTheme = AppThemeColor.electricViolet]) {
+    final Color primary;
+    final Color secondary;
+    final Color background;
+    final Color card;
+    final Color text;
+    final Color textSecondary;
+    final Color borderLight;
+    final Color errorColor;
+
+    switch (colorTheme) {
+      case AppThemeColor.googleAI:
+        primary = const Color(0xFF1A73E8); // Google AI Royal Blue
+        secondary = const Color(0xFF7C3AED); // Gemini AI Violet
+        background = const Color(0xFFF8F9FA); // Google Cloud Light
+        card = const Color(0xFFFFFFFF);
+        text = const Color(0xFF1F1F1F);
+        textSecondary = const Color(0xFF5F6368);
+        borderLight = const Color(0xFFE8EAED);
+        errorColor = const Color(0xFFEA4335);
+        break;
+      case AppThemeColor.electricViolet:
+        primary = const Color(0xFFA100FF); // Accenture Electric Violet
+        secondary = const Color(0xFF7500C0); // Deep Violet Accent
+        background = const Color(0xFFF7F7FA); // Architectural Studio Light Gray
+        card = const Color(0xFFFFFFFF);
+        text = const Color(0xFF0E0E14); // Ultra-crisp Onyx Text
+        textSecondary = const Color(0xFF6E6E82); // Refined Slate Gray Text
+        borderLight = const Color(0xFFE5E5ED); // Crisp High-Tech Border
+        errorColor = const Color(0xFFFF2A55);
+        break;
+    }
 
     return ThemeData(
       useMaterial3: true,
@@ -31,13 +58,13 @@ class AppTheme {
       cardColor: card,
       dividerColor: borderLight,
       
-      colorScheme: const ColorScheme(
+      colorScheme: ColorScheme(
         brightness: Brightness.light,
         primary: primary,
         onPrimary: Colors.white,
         secondary: secondary,
         onSecondary: Colors.white,
-        error: Color(0xFFFF2A55), // High-Tech Crimson Red
+        error: errorColor,
         onError: Colors.white,
         surface: card,
         onSurface: text,
@@ -48,7 +75,7 @@ class AppTheme {
         foregroundColor: text,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: text),
+        iconTheme: IconThemeData(color: text),
         titleTextStyle: GoogleFonts.plusJakartaSans(
           color: text,
           fontSize: 20,
@@ -73,8 +100,8 @@ class AppTheme {
         clipBehavior: Clip.antiAlias,
         shadowColor: Colors.black.withValues(alpha: 0.04),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16), // Modern 16px radius
-          side: const BorderSide(color: borderLight, width: 1.2),
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: borderLight, width: 1.2),
         ),
       ),
 
@@ -98,9 +125,9 @@ class AppTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: primary, size: 26);
+            return IconThemeData(color: primary, size: 26);
           }
-          return const IconThemeData(color: textSecondary, size: 24);
+          return IconThemeData(color: textSecondary, size: 24);
         }),
       ),
 
@@ -124,7 +151,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
-          side: const BorderSide(color: primary, width: 1.5),
+          side: BorderSide(color: primary, width: 1.5),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -153,7 +180,7 @@ class AppTheme {
       ),
 
       textTheme: GoogleFonts.plusJakartaSansTextTheme(
-        const TextTheme(
+        TextTheme(
           displayLarge: TextStyle(color: text, fontSize: 32, fontWeight: FontWeight.bold),
           displayMedium: TextStyle(color: text, fontSize: 26, fontWeight: FontWeight.bold),
           titleLarge: TextStyle(color: text, fontSize: 20, fontWeight: FontWeight.bold),
@@ -178,20 +205,44 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: primary, width: 2),
+          borderSide: BorderSide(color: primary, width: 2),
         ),
       ),
     );
   }
 
-  static ThemeData get darkTheme {
-    const darkPrimary = Color(0xFFA100FF); // Accenture Electric Violet
-    const darkSecondary = Color(0xFF00E5FF); // Cyber Cyan Accent
-    const darkBackground = Color(0xFF0D0D12); // Deep Obsidian Dark Mode
-    const darkCard = Color(0xFF16161F); // Dark Graphite Slate Card
-    const darkText = Color(0xFFF5F5FA); // High Contrast Pristine Text
-    const darkTextSecondary = Color(0xFF9E9EAF); // Purple-Tinted Gray Text
-    const darkBorder = Color(0xFF262633); // Subtle Precision Border
+  static ThemeData getDarkTheme([AppThemeColor colorTheme = AppThemeColor.electricViolet]) {
+    final Color darkPrimary;
+    final Color darkSecondary;
+    final Color darkBackground;
+    final Color darkCard;
+    final Color darkText;
+    final Color darkTextSecondary;
+    final Color darkBorder;
+    final Color darkError;
+
+    switch (colorTheme) {
+      case AppThemeColor.googleAI:
+        darkPrimary = const Color(0xFF4285F4); // Google AI Vibrant Blue
+        darkSecondary = const Color(0xFF9334E6); // Gemini AI Sparkle Purple
+        darkBackground = const Color(0xFF131314); // Google Gemini Dark Obsidian
+        darkCard = const Color(0xFF1E1F20); // Google Gemini Card Surface
+        darkText = const Color(0xFFE3E3E3); // Google Titanium White
+        darkTextSecondary = const Color(0xFF9AA0A6); // Google Cool Slate
+        darkBorder = const Color(0xFF333538); // Google Precision Dark Border
+        darkError = const Color(0xFFF28B82);
+        break;
+      case AppThemeColor.electricViolet:
+        darkPrimary = const Color(0xFFA100FF); // Accenture Electric Violet
+        darkSecondary = const Color(0xFF00E5FF); // Cyber Cyan Accent
+        darkBackground = const Color(0xFF0D0D12); // Deep Obsidian Dark Mode
+        darkCard = const Color(0xFF16161F); // Dark Graphite Slate Card
+        darkText = const Color(0xFFF5F5FA); // High Contrast Pristine Text
+        darkTextSecondary = const Color(0xFF9E9EAF); // Purple-Tinted Gray Text
+        darkBorder = const Color(0xFF262633); // Subtle Precision Border
+        darkError = const Color(0xFFFF2A55);
+        break;
+    }
 
     return ThemeData(
       useMaterial3: true,
@@ -202,13 +253,13 @@ class AppTheme {
       cardColor: darkCard,
       dividerColor: darkBorder,
       
-      colorScheme: const ColorScheme(
+      colorScheme: ColorScheme(
         brightness: Brightness.dark,
         primary: darkPrimary,
         onPrimary: Colors.white,
         secondary: darkSecondary,
         onSecondary: Colors.white,
-        error: Color(0xFFFF2A55),
+        error: darkError,
         onError: Colors.white,
         surface: darkCard,
         onSurface: darkText,
@@ -219,7 +270,7 @@ class AppTheme {
         foregroundColor: darkText,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: darkText),
+        iconTheme: IconThemeData(color: darkText),
         titleTextStyle: GoogleFonts.plusJakartaSans(
           color: darkText,
           fontSize: 20,
@@ -244,7 +295,7 @@ class AppTheme {
         shadowColor: Colors.black.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: darkBorder, width: 1.2),
+          side: BorderSide(color: darkBorder, width: 1.2),
         ),
       ),
 
@@ -268,9 +319,9 @@ class AppTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: darkPrimary, size: 26);
+            return IconThemeData(color: darkPrimary, size: 26);
           }
-          return const IconThemeData(color: darkTextSecondary, size: 24);
+          return IconThemeData(color: darkTextSecondary, size: 24);
         }),
       ),
 
@@ -294,7 +345,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: darkPrimary,
-          side: const BorderSide(color: darkPrimary, width: 1.5),
+          side: BorderSide(color: darkPrimary, width: 1.5),
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
@@ -323,7 +374,7 @@ class AppTheme {
       ),
 
       textTheme: GoogleFonts.plusJakartaSansTextTheme(
-        const TextTheme(
+        TextTheme(
           displayLarge: TextStyle(color: darkText, fontSize: 32, fontWeight: FontWeight.bold),
           displayMedium: TextStyle(color: darkText, fontSize: 26, fontWeight: FontWeight.bold),
           titleLarge: TextStyle(color: darkText, fontSize: 20, fontWeight: FontWeight.bold),
@@ -348,7 +399,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: darkPrimary, width: 2),
+          borderSide: BorderSide(color: darkPrimary, width: 2),
         ),
       ),
     );
@@ -366,3 +417,4 @@ extension ThemeContextExtension on BuildContext {
       ? const Color(0xFFA0A0AB)
       : const Color(0xFF6E6E82);
 }
+

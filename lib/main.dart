@@ -34,15 +34,15 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
+    return ValueListenableBuilder<ThemeState>(
       valueListenable: ThemeService.instance,
-      builder: (context, themeMode, child) {
+      builder: (context, themeState, child) {
         return MaterialApp(
           title: 'UECFI APP',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: themeMode,
+          theme: AppTheme.getLightTheme(themeState.color),
+          darkTheme: AppTheme.getDarkTheme(themeState.color),
+          themeMode: themeState.mode,
           home: const SplashScreen(),
         );
       },
