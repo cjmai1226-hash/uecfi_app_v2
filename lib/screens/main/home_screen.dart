@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 import '../../models/user_profile.dart';
 import '../../services/firestore_service.dart';
-import '../features/create_post_screen.dart';
+import '../forms/create_post_screen.dart';
 import '../../models/blog_post.dart';
 import '../../widgets/community_post_card.dart';
 
@@ -64,13 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
       final docs = snapshot.docs;
       final currentUserUid = UserService.instance.value.memberId;
       final fetchedPosts = docs
-          .where((doc) =>
-              (doc.data() as Map<String, dynamic>)['isReported'] != true)
-          .map((doc) => BlogPost.fromFirestore(
-                doc,
-                avatarMap: avatarMap,
-                currentUserId: currentUserUid,
-              ))
+          .where(
+            (doc) => (doc.data() as Map<String, dynamic>)['isReported'] != true,
+          )
+          .map(
+            (doc) => BlogPost.fromFirestore(
+              doc,
+              avatarMap: avatarMap,
+              currentUserId: currentUserUid,
+            ),
+          )
           .toList();
 
       if (mounted) {
@@ -135,7 +138,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -166,9 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_isLoadingPosts)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                      child: Center(child: CircularProgressIndicator()),
                     )
                   else if (_postsError != null)
                     Padding(
@@ -207,8 +210,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.1),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.1,
+                                ),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(

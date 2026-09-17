@@ -696,6 +696,7 @@ class FirestoreService {
       items.sort((a, b) {
         final Timestamp? tA = a['timestamp'] as Timestamp?;
         final Timestamp? tB = b['timestamp'] as Timestamp?;
+        if (tA == null && tB == null) return 0;
         if (tA == null) return 1;
         if (tB == null) return -1;
         return tB.compareTo(tA);
@@ -704,6 +705,75 @@ class FirestoreService {
       return items;
     } catch (e) {
       debugPrint('Error getting user feedbacks: $e');
+      return [];
+    }
+  }
+
+  // 15. Submit Reward Redemption Request
+  Future<void> submitRedemptionRequest({
+    required String userEmail,
+    required String userNickname,
+    required int coins,
+    required int amount,
+    required String bankMethod,
+    required String accountNumber,
+    required String accountName,
+    String otherBankName = '',
+  }) async {
+    await _firestore.collection('reward_redemptions').add({
+      'userEmail': userEmail.trim().toLowerCase(),
+      'userNickname': userNickname.trim(),
+      'coins': coins,
+      'points': coins, // backwards compatibility
+      'amount': amount,
+      'bankMethod': bankMethod.trim(),
+      'otherBankName': otherBankName.trim(),
+      'rewardType': 'e_credit',
+      'accountNumber': accountNumber.trim(),
+      'accountName': accountName.trim(),
+      'status': 'pending',
+      'timestamp': FieldValue.serverTimestamp(),
+      'adminNote': '',
+    });
+  }
+
+  // 15b. Get User Redemptions Stream
+  Stream<QuerySnapshot> getUserRedemptionsStream(String email) {
+    if (email.isEmpty) {
+      return const Stream.empty();
+    }
+    return _firestore
+        .collection('reward_redemptions')
+        .where('userEmail', isEqualTo: email.trim().toLowerCase())
+        .snapshots();
+  }
+
+  // 15c. Get User Redemptions Future
+  Future<List<Map<String, dynamic>>> getUserRedemptions(String email) async {
+    if (email.isEmpty) return [];
+    try {
+      final snapshot = await _firestore
+          .collection('reward_redemptions')
+          .where('userEmail', isEqualTo: email.trim().toLowerCase())
+          .get();
+      final items = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+
+      items.sort((a, b) {
+        final tA = (a['timestamp'] as Timestamp?)?.toDate();
+        final tB = (b['timestamp'] as Timestamp?)?.toDate();
+        if (tA == null && tB == null) return 0;
+        if (tA == null) return 1;
+        if (tB == null) return -1;
+        return tB.compareTo(tA);
+      });
+
+      return items;
+    } catch (e) {
+      debugPrint('Error getting user redemptions: $e');
       return [];
     }
   }

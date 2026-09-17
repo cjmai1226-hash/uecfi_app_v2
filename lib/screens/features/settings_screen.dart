@@ -36,7 +36,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _onThemeChanged() {
     if (mounted) {
       setState(() {
-        _selectedThemeMode = _themeModeToString(ThemeService.instance.value.mode);
+        _selectedThemeMode = _themeModeToString(
+          ThemeService.instance.value.mode,
+        );
         _selectedThemeColor = ThemeService.instance.value.color;
       });
     }
@@ -68,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _getThemeColorLabel(AppThemeColor color) {
     switch (color) {
       case AppThemeColor.googleAI:
-        return 'Google AI (Gemini)';
+        return 'Gemini';
       case AppThemeColor.electricViolet:
         return 'Electric Violet';
     }
@@ -82,7 +84,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return const Color(0xFF1A73E8);
     }
   }
-
 
   void _showRecoverProfileDialog() {
     final emailController = TextEditingController();
@@ -101,7 +102,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: const Text('Recover Profile'),
               content: SizedBox(
                 width: double.maxFinite,
@@ -203,9 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         if (isLoading) ...[
                           const SizedBox(height: 16),
-                          const Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          const Center(child: CircularProgressIndicator()),
                         ],
                       ],
                     ),
@@ -214,7 +215,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isLoading ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Cancel'),
                 ),
                 FilledButton(
@@ -224,36 +227,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (!recoverFormKey.currentState!.validate()) return;
 
                           final emailText = emailController.text.trim();
-                          final enteredFirstName = firstNameController.text.trim();
-                          final enteredMiddleName = middleNameController.text.trim();
+                          final enteredFirstName = firstNameController.text
+                              .trim();
+                          final enteredMiddleName = middleNameController.text
+                              .trim();
                           final enteredSurname = surnameController.text.trim();
                           final enteredCenter = centerController.text.trim();
-                          final enteredMemberId = memberIdController.text.trim();
+                          final enteredMemberId = memberIdController.text
+                              .trim();
 
                           setDialogState(() {
                             isLoading = true;
                           });
 
                           try {
-                            final profileData = await FirestoreService().getUserProfile(emailText);
+                            final profileData = await FirestoreService()
+                                .getUserProfile(emailText);
                             if (profileData != null) {
-                              final dbFirstName = profileData['firstName']?.toString().trim() ?? '';
-                              final dbMiddleName = profileData['middleName']?.toString().trim() ?? '';
-                              final dbSurname = profileData['surname']?.toString().trim() ?? '';
-                              final dbCenterName = profileData['centerName']?.toString().trim() ?? '';
-                              final dbMemberId = profileData['uid']?.toString().trim() ?? '';
+                              final dbFirstName =
+                                  profileData['firstName']?.toString().trim() ??
+                                  '';
+                              final dbMiddleName =
+                                  profileData['middleName']
+                                      ?.toString()
+                                      .trim() ??
+                                  '';
+                              final dbSurname =
+                                  profileData['surname']?.toString().trim() ??
+                                  '';
+                              final dbCenterName =
+                                  profileData['centerName']
+                                      ?.toString()
+                                      .trim() ??
+                                  '';
+                              final dbMemberId =
+                                  profileData['uid']?.toString().trim() ?? '';
 
-                              final isMatch = enteredFirstName.toLowerCase() == dbFirstName.toLowerCase() &&
-                                  enteredMiddleName.toLowerCase() == dbMiddleName.toLowerCase() &&
-                                  enteredSurname.toLowerCase() == dbSurname.toLowerCase() &&
-                                  enteredCenter.toLowerCase() == dbCenterName.toLowerCase() &&
-                                  enteredMemberId.toLowerCase() == dbMemberId.toLowerCase();
+                              final isMatch =
+                                  enteredFirstName.toLowerCase() ==
+                                      dbFirstName.toLowerCase() &&
+                                  enteredMiddleName.toLowerCase() ==
+                                      dbMiddleName.toLowerCase() &&
+                                  enteredSurname.toLowerCase() ==
+                                      dbSurname.toLowerCase() &&
+                                  enteredCenter.toLowerCase() ==
+                                      dbCenterName.toLowerCase() &&
+                                  enteredMemberId.toLowerCase() ==
+                                      dbMemberId.toLowerCase();
 
                               if (!isMatch) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Verification failed. Details do not match the registered account.'),
+                                      content: Text(
+                                        'Verification failed. Details do not match the registered account.',
+                                      ),
                                       behavior: SnackBarBehavior.floating,
                                       backgroundColor: Colors.redAccent,
                                     ),
@@ -265,15 +293,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 return;
                               }
 
-                              final nickname = profileData['name']?.toString() ?? 'Member';
-                              final district = profileData['district']?.toString() ?? 'Default District';
-                              final area = profileData['area']?.toString() ?? 'Default Area';
-                              final centerAddress = profileData['centerAddress']?.toString() ?? '';
-                              final memberId = profileData['uid']?.toString() ?? '';
-                              final position = profileData['position']?.toString() ?? 'Member';
-                              final avatarUrl = profileData['avatarUrl']?.toString();
-                              final coverUrl = profileData['coverUrl']?.toString();
-                              final contributions = profileData['contributions'] as int? ?? 0;
+                              final nickname =
+                                  profileData['name']?.toString() ?? 'Member';
+                              final district =
+                                  profileData['district']?.toString() ??
+                                  'Default District';
+                              final area =
+                                  profileData['area']?.toString() ??
+                                  'Default Area';
+                              final centerAddress =
+                                  profileData['centerAddress']?.toString() ??
+                                  '';
+                              final memberId =
+                                  profileData['uid']?.toString() ?? '';
+                              final position =
+                                  profileData['position']?.toString() ??
+                                  'Member';
+                              final avatarUrl = profileData['avatarUrl']
+                                  ?.toString();
+                              final coverUrl = profileData['coverUrl']
+                                  ?.toString();
+                              final contributions =
+                                  profileData['contributions'] as int? ?? 0;
                               final isLocked = profileData['isLocked'] == true;
 
                               await UserService.instance.restoreFullProfile(
@@ -297,7 +338,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Profile verified and recovered successfully!'),
+                                    content: Text(
+                                      'Profile verified and recovered successfully!',
+                                    ),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
@@ -309,7 +352,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('No profile found for this email address.'),
+                                    content: Text(
+                                      'No profile found for this email address.',
+                                    ),
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );
@@ -322,7 +367,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             debugPrint('Error recovering profile: $e');
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to recover profile: $e')),
+                                SnackBar(
+                                  content: Text(
+                                    'Failed to recover profile: $e',
+                                  ),
+                                ),
                               );
                             }
                             setDialogState(() {
@@ -357,11 +406,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               {'code': 'ILO', 'name': 'Ilocano (ILO)'},
               {'code': 'TAG', 'name': 'Tagalog (TAG)'},
             ];
-            
+
             return SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 20,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,11 +435,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: Text(
                           name,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                color: theme.colorScheme.primary,
+                              )
                             : null,
                         onTap: () {
                           PrayerLanguageService.instance.setLanguage(code);
@@ -423,7 +480,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 20,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,11 +503,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         title: Text(
                           label,
                           style: TextStyle(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                         trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                color: theme.colorScheme.primary,
+                              )
                             : null,
                         onTap: () {
                           final themeMode = _parseStringToThemeMode(mode);
@@ -496,8 +561,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               {
                 'color': AppThemeColor.googleAI,
-                'title': 'Google AI (Gemini)',
-                'subtitle': 'Google AI Royal Blue & Gemini Violet',
+                'title': 'Gemini',
+                'subtitle': 'Royal Blue & Gemini Violet',
                 'swatches': [
                   const Color(0xFF1A73E8),
                   const Color(0xFF7C3AED),
@@ -513,7 +578,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   maxHeight: MediaQuery.of(context).size.height * 0.85,
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 20,
+                    horizontal: 20,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,7 +623,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           margin: const EdgeInsets.only(bottom: 10),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                                ? theme.colorScheme.primary.withValues(
+                                    alpha: 0.08,
+                                  )
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
@@ -581,7 +651,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     color: c,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.6),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
                                       width: 1.5,
                                     ),
                                   ),
@@ -681,20 +753,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
         subtitle: subtitle,
-        trailing: trailing ??
-            Icon(
-              Icons.chevron_right_rounded,
-              color: theme.hintColor,
-              size: 20,
-            ),
+        trailing:
+            trailing ??
+            Icon(Icons.chevron_right_rounded, color: theme.hintColor, size: 20),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings & Privacy'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Settings & Privacy'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Column(
@@ -832,9 +898,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: 'About',
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const AboutScreen(),
-                  ),
+                  MaterialPageRoute(builder: (context) => const AboutScreen()),
                 );
               },
             ),

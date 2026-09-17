@@ -1,13 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../widgets/sparkling_trophy_icon.dart';
 import 'home_screen.dart';
 import '../features/prayers_screen.dart';
 import '../features/songs_screen.dart';
 import '../features/centers_screen.dart';
-import '../features/leaderboard_screen.dart';
+import '../features/profile_screen.dart';
 import '../features/menu_screen.dart';
 import '../features/search_screen.dart';
 import '../../services/ad_service.dart';
+import '../../services/user_service.dart';
+import '../../models/user_profile.dart';
+import '../../widgets/user_avatar.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -25,7 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     PrayersScreen(),
     SongsScreen(),
     CentersScreen(),
-    LeaderboardScreen(showAppBar: false),
+    ProfileScreen(showAppBar: false),
   ];
 
   int _currentTabIndex = 0;
@@ -50,6 +53,60 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Widget _buildProfileTabIcon(
+    BuildContext context,
+    UserProfile profile, {
+    required bool isSelected,
+  }) {
+    final theme = Theme.of(context);
+    final hasPhoto = (profile.avatarPath.isNotEmpty &&
+            File(profile.avatarPath).existsSync()) ||
+        (profile.avatarUrl.trim().isNotEmpty &&
+            profile.avatarUrl.startsWith('http'));
+    final hasProfile =
+        profile.nickname.trim().isNotEmpty || profile.email.trim().isNotEmpty;
+
+    if (hasPhoto || hasProfile) {
+      return Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected
+                ? theme.colorScheme.primary
+                : (theme.brightness == Brightness.dark
+                    ? Colors.white30
+                    : Colors.black26),
+            width: isSelected ? 2.0 : 1.2,
+          ),
+        ),
+        padding: const EdgeInsets.all(1),
+        child: ClipOval(
+          child: UserAvatar(
+            authorName: profile.nickname.isNotEmpty
+                ? profile.nickname
+                : (profile.firstName.isNotEmpty ? profile.firstName : 'M'),
+            localAvatarPath: profile.avatarPath,
+            avatarUrl: profile.avatarUrl,
+            radius: 12,
+            borderRadius: BorderRadius.circular(12),
+            textStyle: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Icon(
+      isSelected ? Icons.person_rounded : Icons.person_outline_rounded,
+      size: 24,
+    );
   }
 
   @override
@@ -77,13 +134,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
         ),
         centerTitle: false,
         actions: [
-          // Search Icon Button routing to Isolated Search Screen
+          // Search Icon Button routing to Isolated Search Screen with Contextual Initial Category
           IconButton(
             icon: const Icon(Icons.search_rounded),
             tooltip: 'Search',
             onPressed: () {
+              SearchCategory initialCategory = SearchCategory.all;
+              if (_tabController.index == 1) {
+                initialCategory = SearchCategory.prayers;
+              } else if (_tabController.index == 2) {
+                initialCategory = SearchCategory.songs;
+              } else if (_tabController.index == 3) {
+                initialCategory = SearchCategory.centers;
+              }
+
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
+                MaterialPageRoute(
+                  builder: (context) =>
+                      SearchScreen(initialCategory: initialCategory),
+                ),
               );
             },
           ),
@@ -120,8 +189,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
                     : Icons.place_outlined,
               ),
             ),
-            Tab(
-              icon: SparklingTrophyIcon(isSelected: _tabController.index == 4),
+            ValueListenableBuilder<UserProfile>(
+              valueListenable: UserService.instance,
+              builder: (context, profile, _) {
+                return Tab(
+                  icon: _buildProfileTabIcon(
+                    context,
+                    profile,
+                    isSelected: _tabController.index == 4,
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -133,3 +211,4 @@ class _MainNavigationScreenState extends State<MainNavigationScreen>
     );
   }
 }
+

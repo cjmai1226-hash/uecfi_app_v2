@@ -32,7 +32,12 @@ class SearchResultItem {
 }
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final SearchCategory initialCategory;
+
+  const SearchScreen({
+    super.key,
+    this.initialCategory = SearchCategory.all,
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -49,7 +54,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<SearchResultItem> _searchResults = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  SearchCategory _selectedCategory = SearchCategory.all;
+  late SearchCategory _selectedCategory;
 
   List<String> _recentSearches = [];
   static const String _recentSearchesKey = 'recent_searches';
@@ -57,6 +62,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedCategory = widget.initialCategory;
     _loadData();
     _loadRecentSearches();
   }
@@ -240,6 +246,21 @@ class _SearchScreenState extends State<SearchScreen> {
     return clean.length <= 80 ? clean : '${clean.substring(0, 80)}...';
   }
 
+  String _getSearchHintText() {
+    switch (_selectedCategory) {
+      case SearchCategory.songs:
+        return 'Search songs, lyrics, chords, authors...';
+      case SearchCategory.prayers:
+        return 'Search prayers, devotions...';
+      case SearchCategory.centers:
+        return 'Search centers, districts, locations...';
+      case SearchCategory.bylaws:
+        return 'Search church bylaws, articles...';
+      case SearchCategory.all:
+        return 'Search songs, prayers, bylaws, centers...';
+    }
+  }
+
   void _onCategorySelected(SearchCategory cat) {
     setState(() {
       _selectedCategory = cat;
@@ -350,7 +371,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         }
                       },
                       decoration: InputDecoration(
-                        hintText: 'Search songs, prayers, bylaws, centers...',
+                        hintText: _getSearchHintText(),
                         filled: false,
                         hoverColor: Colors.transparent,
                         border: InputBorder.none,

@@ -10,6 +10,7 @@ import '../../services/chords_settings_service.dart';
 import '../../services/ad_service.dart';
 import 'bible_screen.dart';
 import 'help_feedback_screen.dart';
+import 'rewards_screen.dart';
 import '../../widgets/user_avatar.dart';
 
 class MenuScreen extends StatelessWidget {
@@ -168,6 +169,24 @@ class MenuScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 6),
+            Divider(color: theme.dividerColor, height: 1),
+
+            // Section: Rewards (Top Section)
+            _buildSectionHeader(context, 'Rewards'),
+            _buildMenuItem(
+              theme: theme,
+              title: 'Rewards Hub',
+              subtitle: 'Redeem Dev Coins for online bank & e-wallet transfers',
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const RewardsScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 8),
             Divider(color: theme.dividerColor, height: 1),
 
             // Section: Resources

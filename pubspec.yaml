@@ -1,7 +1,7 @@
 name: uecfi_app_v2
 description: "A new Flutter project for UECFI."
 publish_to: 'none'
-version: 2.1.5+46
+version: 2.1.6+47
 
 environment:
   sdk: ^3.11.5

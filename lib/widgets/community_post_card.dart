@@ -7,7 +7,7 @@ import '../services/firestore_service.dart';
 import '../services/user_service.dart';
 import '../screens/features/public_profile_screen.dart';
 import '../screens/features/profile_screen.dart';
-import '../screens/features/create_post_screen.dart';
+import '../screens/forms/create_post_screen.dart';
 import 'user_avatar.dart';
 import 'expandable_text.dart';
 import 'contributor_badge.dart';
@@ -59,7 +59,8 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
     String authorEmail = '',
   }) {
     final currentUser = UserService.instance.value;
-    final isSelf = (authorEmail.isNotEmpty &&
+    final isSelf =
+        (authorEmail.isNotEmpty &&
             authorEmail.toLowerCase() == currentUser.email.toLowerCase()) ||
         authorName.toLowerCase() == currentUser.nickname.toLowerCase() ||
         '${currentUser.firstName} ${currentUser.lastName}'
@@ -89,10 +90,12 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
   void _showPostOptions(BuildContext context) {
     final theme = Theme.of(context);
     final profile = UserService.instance.value;
-    final userNickname =
-        profile.nickname.isNotEmpty ? profile.nickname : 'Member';
+    final userNickname = profile.nickname.isNotEmpty
+        ? profile.nickname
+        : 'Member';
     final userFullName = '${profile.firstName} ${profile.lastName}'.trim();
-    final isAuthor = _post.author == userNickname ||
+    final isAuthor =
+        _post.author == userNickname ||
         (userFullName.isNotEmpty && _post.author == userFullName) ||
         (_post.authorEmail.isNotEmpty &&
             _post.authorEmail.toLowerCase() == profile.email.toLowerCase());
@@ -136,8 +139,10 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                   },
                 ),
               ListTile(
-                leading:
-                    const Icon(Icons.flag_outlined, color: Colors.redAccent),
+                leading: const Icon(
+                  Icons.flag_outlined,
+                  color: Colors.redAccent,
+                ),
                 title: const Text(
                   'Report Post',
                   style: TextStyle(
@@ -214,8 +219,9 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currentUser = UserService.instance.value;
-    final userNickname =
-        currentUser.nickname.isNotEmpty ? currentUser.nickname : 'Member';
+    final userNickname = currentUser.nickname.isNotEmpty
+        ? currentUser.nickname
+        : 'Member';
 
     showModalBottomSheet(
       context: context,
@@ -250,8 +256,9 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                   Expanded(
                     child: StreamBuilder<QuerySnapshot>(
                       stream: _post.id is String
-                          ? FirestoreService()
-                              .getCommentsStream(_post.id.toString())
+                          ? FirestoreService().getCommentsStream(
+                              _post.id.toString(),
+                            )
                           : null,
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
@@ -304,7 +311,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                             final comment = comments[index];
                             final isCommentAuthor =
                                 comment.author.toLowerCase() ==
-                                    currentUser.nickname.toLowerCase();
+                                currentUser.nickname.toLowerCase();
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -322,7 +329,8 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                                       localAvatarPath: isCommentAuthor
                                           ? currentUser.avatarPath
                                           : null,
-                                      avatarUrl: isCommentAuthor &&
+                                      avatarUrl:
+                                          isCommentAuthor &&
                                               (comment.avatarUrl == null ||
                                                   comment.avatarUrl!.isEmpty)
                                           ? currentUser.avatarUrl
@@ -338,8 +346,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                                         color: isDark
                                             ? const Color(0xFF2A2B2C)
                                             : const Color(0xFFEAEBED),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Column(
                                         crossAxisAlignment:
@@ -374,20 +381,22 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                                                   Icon(
                                                     Icons.verified_rounded,
                                                     color: theme
-                                                        .colorScheme.primary,
+                                                        .colorScheme
+                                                        .primary,
                                                     size: 13,
                                                   ),
                                                 ],
                                                 const SizedBox(width: 4),
                                                 FutureBuilder<int>(
-                                                  future: UserContributionsCache
-                                                      .load(comment.author),
+                                                  future:
+                                                      UserContributionsCache.load(
+                                                        comment.author,
+                                                      ),
                                                   initialData:
-                                                      UserContributionsCache
-                                                              .get(
-                                                            comment.author,
-                                                          ) ??
-                                                          0,
+                                                      UserContributionsCache.get(
+                                                        comment.author,
+                                                      ) ??
+                                                      0,
                                                   builder: (context, snapshot) {
                                                     final count =
                                                         snapshot.data ?? 0;
@@ -404,8 +413,9 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                                           const SizedBox(height: 2),
                                           Text(
                                             comment.text,
-                                            style:
-                                                const TextStyle(fontSize: 12),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -503,9 +513,9 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
       builder: (context, profile, child) {
         final isAuthor =
             _post.author.toLowerCase() == profile.nickname.toLowerCase();
-        final postGradient =
-            PostGradientPreset.findById(_post.bgGradient);
-        final isLong = _post.content.characters.length > 180 ||
+        final postGradient = PostGradientPreset.findById(_post.bgGradient);
+        final isLong =
+            _post.content.characters.length > 180 ||
             _post.content.split('\n').length > 4;
 
         return Container(
@@ -514,10 +524,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
           decoration: BoxDecoration(
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: theme.dividerColor,
-              width: 1.2,
-            ),
+            border: Border.all(color: theme.dividerColor, width: 1.2),
             boxShadow: [
               BoxShadow(
                 color: isDark
@@ -547,7 +554,8 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                   child: UserAvatar(
                     authorName: _post.author,
                     localAvatarPath: isAuthor ? profile.avatarPath : null,
-                    avatarUrl: isAuthor &&
+                    avatarUrl:
+                        isAuthor &&
                             (_post.avatarUrl == null ||
                                 _post.avatarUrl!.isEmpty)
                         ? profile.avatarUrl
@@ -586,8 +594,7 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                       ],
                       const SizedBox(width: 4),
                       FutureBuilder<int>(
-                        future:
-                            UserContributionsCache.load(_post.author),
+                        future: UserContributionsCache.load(_post.author),
                         initialData:
                             UserContributionsCache.get(_post.author) ?? 0,
                         builder: (context, snapshot) {
@@ -716,7 +723,9 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                         ),
                         decoration: BoxDecoration(
                           color: _post.isLiked
-                              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+                              ? theme.colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                )
                               : theme.dividerColor.withValues(alpha: 0.35),
                           borderRadius: BorderRadius.circular(20),
                         ),

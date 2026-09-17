@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/database_helper.dart';
 import '../../models/song_model.dart';
 import 'bookmarks_screen.dart';
-import 'submit_song_screen.dart';
+import '../forms/submit_song_screen.dart';
 import '../details/song_detail_screen.dart';
 import '../../services/ad_service.dart';
 
@@ -80,8 +80,9 @@ class _SongsScreenState extends State<SongsScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.12),
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.12,
+                              ),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -134,132 +135,126 @@ class _SongsScreenState extends State<SongsScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final song = _songs[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => SongDetailScreen(
-                                      songs: _songs,
-                                      initialIndex: index,
-                                    ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final song = _songs[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => SongDetailScreen(
+                                    songs: _songs,
+                                    initialIndex: index,
                                   ),
-                                );
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          // Chords Badge
-                                          if (song.hasChords) ...[
-                                            Container(
-                                              padding: const EdgeInsets
-                                                  .symmetric(
-                                                horizontal: 8,
-                                                vertical: 3,
-                                              ),
-                                              decoration: BoxDecoration(
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // Chords Badge
+                                        if (song.hasChords) ...[
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.secondary
+                                                  .withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
+                                              border: Border.all(
                                                 color: theme
-                                                    .colorScheme.secondary
-                                                    .withValues(alpha: 0.12),
-                                                borderRadius:
-                                                    BorderRadius.circular(6),
-                                                border: Border.all(
-                                                  color: theme
-                                                      .colorScheme.secondary
-                                                      .withValues(alpha: 0.25),
-                                                  width: 1,
-                                                ),
+                                                    .colorScheme
+                                                    .secondary
+                                                    .withValues(alpha: 0.25),
+                                                width: 1,
                                               ),
-                                              child: Row(
-                                                mainAxisSize:
-                                                    MainAxisSize.min,
-                                                children: [
-                                                  Icon(
-                                                    Icons
-                                                        .music_note_rounded,
-                                                    size: 12,
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  Icons.music_note_rounded,
+                                                  size: 12,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .secondary,
+                                                ),
+                                                const SizedBox(width: 2),
+                                                Text(
+                                                  'Chords',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.bold,
                                                     color: theme
                                                         .colorScheme
                                                         .secondary,
                                                   ),
-                                                  const SizedBox(width: 2),
-                                                  Text(
-                                                    'Chords',
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .secondary,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                          ],
-
-                                          // Song Title
-                                          Text(
-                                            song.title.isNotEmpty
-                                                ? song.title
-                                                : 'Untitled Song',
-                                            style: theme.textTheme.titleMedium
-                                                ?.copyWith(
-                                              fontSize: 15.5,
-                                              fontWeight: FontWeight.bold,
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          if (song.content.isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-
-                                            // Lyrics Content Snippet (1 Maxline)
-                                            Text(
-                                              song.content
-                                                  .replaceAll(
-                                                      RegExp(r'\s+'), ' ')
-                                                  .trim(),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: theme.textTheme.bodyMedium
-                                                  ?.copyWith(
-                                                fontSize: 13,
-                                                color: theme.textTheme
-                                                    .bodySmall?.color,
-                                              ),
-                                            ),
-                                          ],
+                                          const SizedBox(height: 6),
                                         ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
 
-                                    // Trailing Chevron Icon
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: theme.hintColor,
-                                      size: 22,
+                                        // Song Title
+                                        Text(
+                                          song.title.isNotEmpty
+                                              ? song.title
+                                              : 'Untitled Song',
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontSize: 15.5,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        if (song.content.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+
+                                          // Lyrics Content Snippet (1 Maxline)
+                                          Text(
+                                            song.content
+                                                .replaceAll(RegExp(r'\s+'), ' ')
+                                                .trim(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: theme.textTheme.bodyMedium
+                                                ?.copyWith(
+                                                  fontSize: 13,
+                                                  color: theme
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.color,
+                                                ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // Trailing Chevron Icon
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: theme.hintColor,
+                                    size: 22,
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                        childCount: _songs.length,
-                      ),
+                          ),
+                        );
+                      }, childCount: _songs.length),
                     ),
                   ),
               ],
