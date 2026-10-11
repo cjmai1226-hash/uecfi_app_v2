@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/prayer_language_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/user_service.dart';
 import '../../services/notifications_settings_service.dart';
 import 'about_screen.dart';
-
-import '../../utils/theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,13 +16,11 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedThemeMode = 'system';
-  AppThemeColor _selectedThemeColor = AppThemeColor.electricViolet;
 
   @override
   void initState() {
     super.initState();
     _selectedThemeMode = _themeModeToString(ThemeService.instance.value.mode);
-    _selectedThemeColor = ThemeService.instance.value.color;
     ThemeService.instance.addListener(_onThemeChanged);
   }
 
@@ -39,7 +36,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _selectedThemeMode = _themeModeToString(
           ThemeService.instance.value.mode,
         );
-        _selectedThemeColor = ThemeService.instance.value.color;
       });
     }
   }
@@ -67,23 +63,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _getThemeColorLabel(AppThemeColor color) {
-    switch (color) {
-      case AppThemeColor.googleAI:
-        return 'Gemini';
-      case AppThemeColor.electricViolet:
-        return 'Electric Violet';
-    }
-  }
-
-  Color _getThemePrimaryColor(AppThemeColor color) {
-    switch (color) {
-      case AppThemeColor.electricViolet:
-        return const Color(0xFFA100FF);
-      case AppThemeColor.googleAI:
-        return const Color(0xFF1A73E8);
-    }
-  }
 
   void _showRecoverProfileDialog() {
     final emailController = TextEditingController();
@@ -441,9 +420,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         trailing: isSelected
-                            ? Icon(
-                                Icons.check_circle_rounded,
+                            ? AppIcon(
+                                icon: HugeIcons.strokeRoundedCheckmarkCircle01,
                                 color: theme.colorScheme.primary,
+                                size: 20,
                               )
                             : null,
                         onTap: () {
@@ -509,9 +489,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ),
                         trailing: isSelected
-                            ? Icon(
-                                Icons.check_circle_rounded,
+                            ? AppIcon(
+                                icon: HugeIcons.strokeRoundedCheckmarkCircle01,
                                 color: theme.colorScheme.primary,
+                                size: 20,
                               )
                             : null,
                         onTap: () {
@@ -535,174 +516,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Slide up modal bottom sheet to select theme color palette
-  void _showThemeColorBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final theme = Theme.of(context);
-            final colors = [
-              {
-                'color': AppThemeColor.electricViolet,
-                'title': 'Electric Violet',
-                'subtitle': 'Modern Electric Violet & Cyber Slate',
-                'swatches': [
-                  const Color(0xFFA100FF),
-                  const Color(0xFF7500C0),
-                  const Color(0xFF00E5FF),
-                ],
-              },
-              {
-                'color': AppThemeColor.googleAI,
-                'title': 'Gemini',
-                'subtitle': 'Royal Blue & Gemini Violet',
-                'swatches': [
-                  const Color(0xFF1A73E8),
-                  const Color(0xFF7C3AED),
-                  const Color(0xFFFF5E7E),
-                ],
-              },
-            ];
-
-            return SafeArea(
-              top: false,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.85,
-                ),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 20,
-                    horizontal: 20,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: theme.dividerColor,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Theme Color',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Select your preferred brand accent and interface color',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: theme.textTheme.bodySmall?.color,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      ...colors.map((item) {
-                        final themeColor = item['color'] as AppThemeColor;
-                        final title = item['title'] as String;
-                        final subtitle = item['subtitle'] as String;
-                        final swatches = item['swatches'] as List<Color>;
-                        final isSelected = themeColor == _selectedThemeColor;
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? theme.colorScheme.primary.withValues(
-                                    alpha: 0.08,
-                                  )
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isSelected
-                                  ? theme.colorScheme.primary
-                                  : theme.dividerColor,
-                              width: isSelected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 4,
-                            ),
-                            leading: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: swatches.map((c) {
-                                return Container(
-                                  width: 18,
-                                  height: 18,
-                                  margin: const EdgeInsets.only(right: 4),
-                                  decoration: BoxDecoration(
-                                    color: c,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.6,
-                                      ),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                            title: Text(
-                              title,
-                              style: TextStyle(
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                            ),
-                            subtitle: Text(
-                              subtitle,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.textTheme.bodySmall?.color,
-                              ),
-                            ),
-                            trailing: isSelected
-                                ? Icon(
-                                    Icons.check_circle_rounded,
-                                    color: theme.colorScheme.primary,
-                                  )
-                                : null,
-                            onTap: () {
-                              ThemeService.instance.setThemeColor(themeColor);
-                              setState(() {
-                                _selectedThemeColor = themeColor;
-                              });
-                              setModalState(() {});
-                              Navigator.pop(context);
-                            },
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
   void _showFeatureDialog(String title, String message) {
     showDialog(
@@ -755,7 +568,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         subtitle: subtitle,
         trailing:
             trailing ??
-            Icon(Icons.chevron_right_rounded, color: theme.hintColor, size: 20),
+            AppIcon(icon: HugeIcons.strokeRoundedArrowRight01, color: theme.hintColor, size: 18),
       );
     }
 
@@ -821,36 +634,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               onTap: _showAppearanceBottomSheet,
-            ),
-            buildSettingsRow(
-              title: 'Theme Color',
-              subtitle: Text(
-                _getThemeColorLabel(_selectedThemeColor),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: theme.textTheme.bodySmall?.color,
-                ),
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: _getThemePrimaryColor(_selectedThemeColor),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: theme.hintColor,
-                    size: 20,
-                  ),
-                ],
-              ),
-              onTap: _showThemeColorBottomSheet,
             ),
 
             const SizedBox(height: 8),

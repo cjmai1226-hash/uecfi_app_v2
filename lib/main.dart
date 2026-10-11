@@ -40,8 +40,8 @@ class MainApp extends StatelessWidget {
         return MaterialApp(
           title: 'UECFI APP',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.getLightTheme(themeState.color),
-          darkTheme: AppTheme.getDarkTheme(themeState.color),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
           themeMode: themeState.mode,
           home: const SplashScreen(),
         );

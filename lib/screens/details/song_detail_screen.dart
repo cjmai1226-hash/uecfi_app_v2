@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/song_model.dart';
 import '../../services/bookmark_service.dart';
 import '../../utils/chord_helper.dart';
@@ -27,6 +28,7 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
   String _instrument = 'Guitar'; // 'Guitar' or 'Ukulele'
   double _fontSize = 19.0; // Reader font size
   bool _isBookmarked = false;
+  bool _showCollapsedTitle = false;
 
   SongModel get song => widget.songs[_currentIndex];
 
@@ -65,11 +67,13 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
     }
   }
 
-  /// Open Font Size Slider Bottom Sheet
-  void _showFontSizeSlider(BuildContext context) {
+
+  /// Open Chords & Playing Tools Bottom Sheet
+  void _showChordsToolsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -77,63 +81,337 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final theme = Theme.of(context);
+            final canShowChords =
+                song.hasChords && ChordsSettingsService.instance.value;
             return SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Handle Bar
+                    Center(
+                      child: Container(
+                        width: 36,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.outlineVariant,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    if (canShowChords) ...[
+                      // 1. Show Chords Dropdown
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Show Chords',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          DropdownButtonHideUnderline(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: theme.colorScheme.outline.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ),
+                              ),
+                              child: DropdownButton<bool>(
+                                value: _showChords,
+                                isDense: true,
+                                icon: const Icon(Icons.arrow_drop_down_rounded),
+                                borderRadius: BorderRadius.circular(12),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: true,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.visibility_outlined,
+                                          size: 18,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text('Show'),
+                                      ],
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: false,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.visibility_off_outlined,
+                                          size: 18,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text('Hide'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (newVal) {
+                                  if (newVal != null) {
+                                    setModalState(() {});
+                                    setState(() {
+                                      _showChords = newVal;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      if (_showChords) ...[
+                        Divider(
+                          height: 28,
+                          color: Colors.grey.withValues(alpha: 0.4),
+                        ),
+                        // 2. Key Transpose Controls (-5 to +5 stepper, no reset)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Key Transpose',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton.filledTonal(
+                                  icon: const Icon(
+                                    Icons.remove_rounded,
+                                    size: 18,
+                                  ),
+                                  tooltip: 'Transpose Down',
+                                  onPressed: _transposeOffset > -5
+                                      ? () {
+                                          setModalState(() {});
+                                          setState(() {
+                                            _transposeOffset--;
+                                          });
+                                        }
+                                      : null,
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
+                                  child: Text(
+                                    _transposeOffset > 0
+                                        ? '+$_transposeOffset'
+                                        : '$_transposeOffset',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                                IconButton.filledTonal(
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  tooltip: 'Transpose Up',
+                                  onPressed: _transposeOffset < 5
+                                      ? () {
+                                          setModalState(() {});
+                                          setState(() {
+                                            _transposeOffset++;
+                                          });
+                                        }
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Divider(
+                          height: 28,
+                          color: Colors.grey.withValues(alpha: 0.4),
+                        ),
+                        // 3. Instrument Choice (Guitar / Ukulele)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Instrument Diagrams',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Fingerings for chord popups',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                            DropdownButtonHideUnderline(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.colorScheme.outline.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                  ),
+                                ),
+                                child: DropdownButton<String>(
+                                  value: _instrument,
+                                  isDense: true,
+                                  icon: const Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  items: const [
+                                    DropdownMenuItem(
+                                      value: 'Guitar',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.music_note_rounded,
+                                            size: 18,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text('Guitar'),
+                                        ],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'Ukulele',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.queue_music_rounded,
+                                            size: 18,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text('Ukulele'),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (newVal) {
+                                    if (newVal != null) {
+                                      setModalState(() {});
+                                      setState(() {
+                                        _instrument = newVal;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      Divider(
+                        height: 28,
+                        color: Colors.grey.withValues(alpha: 0.4),
+                      ),
+                    ],
+
+                    // 4. Font Size Dropdown
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Font Size',
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          '${_fontSize.toInt()} px',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        const Text(
-                          'A',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Expanded(
-                          child: Slider(
-                            value: _fontSize,
-                            min: 10.0,
-                            max: 24.0,
-                            divisions: 14,
-                            label: '${_fontSize.toInt()} px',
-                            onChanged: (val) {
-                              setModalState(() {});
-                              setState(() {
-                                _fontSize = val;
-                              });
-                            },
-                          ),
-                        ),
-                        const Text(
-                          'A',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
+                        DropdownButtonHideUnderline(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withValues(
+                                  alpha: 0.2,
+                                ),
+                              ),
+                            ),
+                            child: DropdownButton<double>(
+                              value: [
+                                14.0,
+                                16.0,
+                                18.0,
+                                19.0,
+                                21.0,
+                                24.0,
+                              ].contains(_fontSize)
+                                  ? _fontSize
+                                  : 19.0,
+                              isDense: true,
+                              icon: const Icon(Icons.arrow_drop_down_rounded),
+                              borderRadius: BorderRadius.circular(12),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 14.0,
+                                  child: Text('14 px (Small)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 16.0,
+                                  child: Text('16 px (Normal)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 18.0,
+                                  child: Text('18 px (Medium)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 19.0,
+                                  child: Text('19 px (Default)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 21.0,
+                                  child: Text('21 px (Large)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 24.0,
+                                  child: Text('24 px (Extra Large)'),
+                                ),
+                              ],
+                              onChanged: (newVal) {
+                                if (newVal != null) {
+                                  setModalState(() {});
+                                  setState(() {
+                                    _fontSize = newVal;
+                                  });
+                                }
+                              },
+                            ),
                           ),
                         ),
                       ],
@@ -167,7 +445,11 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
 
     // If chords are toggled off, render standard soft-wrapping lyrics text that flows down vertically
     if (!_showChords) {
-      final baseStyle = TextStyle(fontSize: _fontSize, height: 1.6, color: textColor);
+      final baseStyle = TextStyle(
+        fontSize: _fontSize,
+        height: 1.6,
+        color: textColor,
+      );
       return SelectableText.rich(
         _parseLyricsWithBoldKeywords(rawText, baseStyle),
       );
@@ -257,17 +539,8 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
       }
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const ClampingScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: SelectableText.rich(TextSpan(children: spans)),
-          ),
-        );
-      },
+    return SelectableText.rich(
+      TextSpan(children: spans),
     );
   }
 
@@ -282,23 +555,21 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
 
     for (final match in regex.allMatches(text)) {
       if (match.start > start) {
-        children.add(TextSpan(
-          text: text.substring(start, match.start),
-          style: baseStyle,
-        ));
+        children.add(
+          TextSpan(text: text.substring(start, match.start), style: baseStyle),
+        );
       }
-      children.add(TextSpan(
-        text: match.group(0),
-        style: baseStyle.copyWith(fontWeight: FontWeight.bold),
-      ));
+      children.add(
+        TextSpan(
+          text: match.group(0),
+          style: baseStyle.copyWith(fontWeight: FontWeight.bold),
+        ),
+      );
       start = match.end;
     }
 
     if (start < text.length) {
-      children.add(TextSpan(
-        text: text.substring(start),
-        style: baseStyle,
-      ));
+      children.add(TextSpan(text: text.substring(start), style: baseStyle));
     }
 
     return TextSpan(children: children);
@@ -308,250 +579,134 @@ class _SongDetailScreenState extends State<SongDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final currentSong = song;
-    final displayContent = _showChords && currentSong.hasChords && ChordsSettingsService.instance.value
+    final displayContent =
+        _showChords &&
+            currentSong.hasChords &&
+            ChordsSettingsService.instance.value
         ? currentSong.chords
         : currentSong.content;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Image.asset(
-          'assets/images/brand_mark.png',
-          height: 32,
-          width: 32,
-          fit: BoxFit.contain,
-        ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          // Font Size Slider Button
-          IconButton(
-            icon: const Icon(Icons.format_size_rounded),
-            tooltip: 'Adjust Font Size',
-            onPressed: () => _showFontSizeSlider(context),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              currentSong.title.isNotEmpty
-                  ? currentSong.title
-                  : 'Untitled Song',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (currentSong.author.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                'By ${currentSong.author}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.textTheme.bodySmall?.color,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-            const SizedBox(height: 14),
+    final displayTitle =
+        currentSong.title.isNotEmpty ? currentSong.title : 'Untitled Song';
 
-            // Category Badge
-            if (currentSong.category.isNotEmpty) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.brightness == Brightness.dark
-                      ? const Color(0xFF3A3B3C)
-                      : const Color(0xFFE4E6EB),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleBookmark,
+        tooltip: _isBookmarked ? 'Remove Bookmark' : 'Bookmark Song',
+        child: AppIcon(
+          icon: _isBookmarked
+              ? HugeIcons.strokeRoundedBookmark02
+              : HugeIcons.strokeRoundedBookmark02,
+        ),
+      ),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.axis == Axis.vertical) {
+            final isCollapsed = notification.metrics.pixels > 40;
+            if (isCollapsed != _showCollapsedTitle) {
+              setState(() {
+                _showCollapsedTitle = isCollapsed;
+              });
+            }
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+              title: AnimatedOpacity(
+                opacity: _showCollapsedTitle ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
                 child: Text(
-                  currentSong.category,
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontSize: 12,
+                  displayTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-            ] else
-              const SizedBox(height: 8),
-
-            // Controls Toolbar: Transpose (-/+) & Instrument Choice (Guitar / Ukulele)
-            if (currentSong.hasChords && _showChords && ChordsSettingsService.instance.value)
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(
-                    alpha: 0.5,
+              actions: [
+                IconButton(
+                  icon: const AppIcon(
+                    icon: HugeIcons.strokeRoundedMoreHorizontalCircle02,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  tooltip: 'Chords & Reading Tools',
+                  onPressed: () => _showChordsToolsSheet(context),
                 ),
-                child: Row(
+                const SizedBox(width: 4),
+              ],
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Transpose Control
+                    // Expanded full title
                     Text(
-                      'Key: ',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      displayTitle,
+                      style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
+                        height: 1.35,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.remove_circle_outline_rounded,
-                        size: 20,
+                    if (currentSong.author.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'By ${currentSong.author}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.textTheme.bodySmall?.color,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
-                      tooltip: 'Transpose Down',
-                      onPressed: () {
-                        setState(() {
-                          _transposeOffset--;
-                        });
-                      },
-                    ),
-                    Text(
-                      _transposeOffset >= 0
-                          ? '+$_transposeOffset'
-                          : '$_transposeOffset',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.add_circle_outline_rounded,
-                        size: 20,
-                      ),
-                      tooltip: 'Transpose Up',
-                      onPressed: () {
-                        setState(() {
-                          _transposeOffset++;
-                        });
-                      },
-                    ),
-                    if (_transposeOffset != 0)
-                      InkWell(
-                        onTap: () {
-                          setState(() {
-                            _transposeOffset = 0;
-                          });
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 4,
+                    ],
+                    if (currentSong.category.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.25),
                           ),
-                          child: Text(
-                            'Reset',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.colorScheme.primary,
-                              decoration: TextDecoration.underline,
-                            ),
+                        ),
+                        child: Text(
+                          currentSong.category,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                            letterSpacing: 0.3,
                           ),
                         ),
                       ),
-                    const Spacer(),
-
-                    // Instrument Selector Dropdown
-                    DropdownButton<String>(
-                      value: _instrument,
-                      underline: const SizedBox(),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Guitar',
-                          child: Text('Guitar'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Ukulele',
-                          child: Text('Ukulele'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _instrument = val;
-                          });
-                        }
-                      },
-                    ),
+                    ],
                   ],
                 ),
               ),
-
-            // Main Content / Chords Reader
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _showChords && currentSong.hasChords && ChordsSettingsService.instance.value
-                            ? 'Chords & Lyrics'
-                            : 'Lyrics & Content',
-                        style: theme.textTheme.titleMedium,
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+              sliver: SliverToBoxAdapter(
+                child: displayContent.isNotEmpty
+                    ? _buildAlignedChordsView(context, displayContent)
+                    : Text(
+                        'No lyrics or content available for this song.',
+                        style: theme.textTheme.bodyMedium,
                       ),
-                      ValueListenableBuilder<bool>(
-                        valueListenable: ChordsSettingsService.instance,
-                        builder: (context, showChordsAndShapes, child) {
-                          if (currentSong.hasChords && showChordsAndShapes) {
-                            return IconButton(
-                              icon: Icon(
-                                _showChords
-                                    ? Icons.music_note_rounded
-                                    : Icons.music_note_outlined,
-                                color: theme.colorScheme.primary,
-                              ),
-                              tooltip: 'Toggle Chords',
-                              onPressed: () {
-                                setState(() {
-                                  _showChords = !_showChords;
-                                });
-                              },
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        },
-                      ),
-                    ],
-                  ),
-                  Divider(color: theme.dividerColor, height: 24),
-
-                  // DB Browser Monospace Aligned Text View
-                  displayContent.isNotEmpty
-                      ? _buildAlignedChordsView(context, displayContent)
-                      : Text(
-                          'No lyrics or content available for this song.',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                  const SizedBox(height: 80),
-                ],
               ),
             ),
           ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _toggleBookmark,
-        tooltip: _isBookmarked ? 'Remove Bookmark' : 'Bookmark Song',
-        child: Icon(
-          _isBookmarked
-              ? Icons.bookmark_rounded
-              : Icons.bookmark_border_rounded,
         ),
       ),
     );

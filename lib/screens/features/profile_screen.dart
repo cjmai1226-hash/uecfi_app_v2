@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../services/user_service.dart';
 import '../../services/database_helper.dart';
 import '../../models/user_profile.dart';
@@ -11,9 +12,7 @@ import '../../models/center_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/expandable_text.dart';
-import '../../widgets/contributor_badge.dart';
 import '../../widgets/user_avatar.dart';
-import '../details/center_detail_screen.dart';
 import 'search_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -164,8 +163,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.delete_outline_rounded,
+                  leading: const AppIcon(
+                    icon: HugeIcons.strokeRoundedDelete02,
                     color: Colors.redAccent,
                   ),
                   title: const Text(
@@ -195,7 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     bool isDark,
   ) {
     final title = item['title'] ?? 'Untitled Song';
-    final author = (item['author'] as String?)?.isNotEmpty == true ? item['author'] : 'Unknown';
+    final author = (item['author'] as String?)?.isNotEmpty == true
+        ? item['author']
+        : 'Unknown';
     final category = item['category'] ?? 'Worship';
     final chords = item['chords'] as String? ?? '';
     final lyrics = item['lyrics'] as String? ?? '';
@@ -208,8 +209,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? 'Approved'
         : (status == 'rejected' ? 'Rejected' : 'Pending Review');
     final statusIcon = status == 'approved'
-        ? Icons.check_circle_rounded
-        : (status == 'rejected' ? Icons.cancel_rounded : Icons.schedule_rounded);
+        ? HugeIcons.strokeRoundedCheckmarkCircle01
+        : (status == 'rejected'
+              ? HugeIcons.strokeRoundedCancel01
+              : HugeIcons.strokeRoundedClock01);
 
     showModalBottomSheet(
       context: context,
@@ -257,7 +260,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded),
+                          icon: const AppIcon(
+                            icon: HugeIcons.strokeRoundedCancel01,
+                            size: 22,
+                          ),
                           visualDensity: VisualDensity.compact,
                           onPressed: () => Navigator.of(sheetContext).pop(),
                         ),
@@ -308,7 +314,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(statusIcon, size: 16, color: statusColor),
+                                  AppIcon(
+                                    icon: statusIcon,
+                                    size: 16,
+                                    color: statusColor,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     statusLabel,
@@ -679,8 +689,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (hasPhoto)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      Icons.visibility_rounded,
+                    leading: AppIcon(
+                      icon: HugeIcons.strokeRoundedView,
                       color: theme.brightness == Brightness.dark
                           ? Colors.white70
                           : Colors.black87,
@@ -693,8 +703,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.photo_library_rounded,
+                  leading: AppIcon(
+                    icon: HugeIcons.strokeRoundedImage01,
                     color: theme.brightness == Brightness.dark
                         ? Colors.white70
                         : Colors.black87,
@@ -741,239 +751,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Future<void> _openCenterDetail(
-    BuildContext context,
-    String centerName,
-    String centerAddress,
-  ) async {
-    try {
-      final allCenters = await DatabaseHelper.getAllCenters();
-      final match = allCenters.firstWhere(
-        (c) => c.name.trim().toLowerCase() == centerName.trim().toLowerCase(),
-        orElse: () => CenterModel(
-          name: centerName,
-          address: centerAddress,
-          district: '',
-          area: '',
-          location: '',
-          contact: '',
-          status: 'Active',
-          history: '',
-          page: '',
-        ),
-      );
-      if (context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CenterDetailScreen(center: match),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error opening center detail: $e');
-    }
-  }
-
-  String _extractShortAddress(String rawAddress) {
-    final clean = rawAddress.trim();
-    if (clean.isEmpty) return 'Center';
-    final parts = clean.split(',');
-    if (parts.isNotEmpty && parts.first.trim().isNotEmpty) {
-      return parts.first.trim();
-    }
-    return clean;
-  }
-
-  void _showAllVisitedCentersSheet(
-    BuildContext context, {
-    required List<Map<String, dynamic>> visits,
-    required String memberName,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-
-        return DraggableScrollableSheet(
-          initialChildSize: 0.65,
-          minChildSize: 0.4,
-          maxChildSize: 0.92,
-          expand: false,
-          builder: (context, scrollController) {
-            return SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  // Top Drag Handle Pill
-                  Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.dividerColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  // Header Row
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Visited Centers',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${visits.length}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(color: theme.dividerColor, height: 1),
-
-                  // List of Centers
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      itemCount: visits.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final visit = visits[index];
-                        final centerName =
-                            (visit['centerName'] as String?)?.trim() ??
-                                'Worship Center';
-                        final centerAddress =
-                            (visit['centerAddress'] as String?)?.trim() ?? '';
-                        final dynamic timestamp = visit['visitedAt'];
-                        String dateStr = '';
-                        if (timestamp is Timestamp) {
-                          final dt = timestamp.toDate();
-                          final months = [
-                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-                          ];
-                          dateStr =
-                              'Visited on ${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-                        }
-
-                        return Card(
-                          margin: EdgeInsets.zero,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: BorderSide(
-                              color: theme.dividerColor.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
-                            ),
-                            leading: CircleAvatar(
-                              backgroundColor: theme.colorScheme.primary
-                                  .withValues(alpha: 0.1),
-                              child: Icon(
-                                Icons.place_rounded,
-                                color: theme.colorScheme.primary,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              centerName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            subtitle: (centerAddress.isNotEmpty ||
-                                    dateStr.isNotEmpty)
-                                ? Text(
-                                    [
-                                      if (centerAddress.isNotEmpty)
-                                        centerAddress,
-                                      if (dateStr.isNotEmpty) dateStr,
-                                    ].join(' • '),
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: theme.textTheme.bodySmall?.color,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : null,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              size: 20,
-                            ),
-                            onTap: () {
-                              Navigator.of(sheetContext).pop();
-                              _openCenterDetail(
-                                context,
-                                centerName,
-                                centerAddress,
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -986,7 +763,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               elevation: 0,
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.search_rounded),
+                  icon: const AppIcon(
+                    icon: HugeIcons.strokeRoundedSearch01,
+                    size: 22,
+                  ),
                   tooltip: 'Search',
                   onPressed: () {
                     Navigator.of(context).push(
@@ -1011,15 +791,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : '';
           final String fullNameWithInitial =
               (profile.firstName.trim().isNotEmpty ||
-                      profile.lastName.trim().isNotEmpty)
-                  ? [
-                      if (profile.firstName.trim().isNotEmpty)
-                        profile.firstName.trim(),
-                      if (middleInitial.isNotEmpty) middleInitial,
-                      if (profile.lastName.trim().isNotEmpty)
-                        profile.lastName.trim(),
-                    ].join(' ')
-                  : nickname;
+                  profile.lastName.trim().isNotEmpty)
+              ? [
+                  if (profile.firstName.trim().isNotEmpty)
+                    profile.firstName.trim(),
+                  if (middleInitial.isNotEmpty) middleInitial,
+                  if (profile.lastName.trim().isNotEmpty)
+                    profile.lastName.trim(),
+                ].join(' ')
+              : nickname;
           final district = profile.district.isNotEmpty
               ? (profile.district.startsWith('District')
                     ? profile.district
@@ -1147,20 +927,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                             if (nickname.toLowerCase() == 'devchristian' ||
-                                fullNameWithInitial.toLowerCase().contains('christian')) ...[
+                                fullNameWithInitial.toLowerCase().contains(
+                                  'christian',
+                                )) ...[
                               const SizedBox(width: 6),
-                              Icon(
-                                Icons.verified_rounded,
+                              AppIcon(
+                                icon: HugeIcons.strokeRoundedCheckmarkBadge01,
                                 color: theme.colorScheme.primary,
                                 size: 20,
                               ),
                             ],
-                            const SizedBox(width: 6),
-                            getContributorBadge(
-                              profile.contributions,
-                              theme,
-                              size: 20,
-                            ),
                           ],
                         ),
                       ),
@@ -1168,28 +944,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Builder(
                         builder: (context) {
                           final int postCount = _contributions
-                              .where((item) =>
-                                  (item['type'] ?? '')
-                                      .toString()
-                                      .toLowerCase()
-                                      .contains('post') &&
-                                  item['status'] != 'reported')
+                              .where(
+                                (item) =>
+                                    (item['type'] ?? '')
+                                        .toString()
+                                        .toLowerCase()
+                                        .contains('post') &&
+                                    item['status'] != 'reported',
+                              )
                               .length;
                           final int songCount = _contributions
-                              .where((item) =>
-                                  (item['type'] ?? '')
-                                      .toString()
-                                      .toLowerCase()
-                                      .contains('song') &&
-                                  item['status'] != 'reported')
+                              .where(
+                                (item) =>
+                                    (item['type'] ?? '')
+                                        .toString()
+                                        .toLowerCase()
+                                        .contains('song') &&
+                                    item['status'] != 'reported',
+                              )
                               .length;
                           final int centerCount = _contributions
-                              .where((item) =>
-                                  (item['type'] ?? '')
-                                      .toString()
-                                      .toLowerCase()
-                                      .contains('center') &&
-                                  item['status'] != 'reported')
+                              .where(
+                                (item) =>
+                                    (item['type'] ?? '')
+                                        .toString()
+                                        .toLowerCase()
+                                        .contains('center') &&
+                                    item['status'] != 'reported',
+                              )
                               .length;
 
                           return Padding(
@@ -1258,7 +1040,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: ElevatedButton.icon(
                                 onPressed: () =>
                                     _openEditProfilePage(context, profile),
-                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                icon: AppIcon(
+                                  icon: HugeIcons.strokeRoundedEdit02,
+                                  size: 18,
+                                  color: isDark
+                                      ? const Color(0xFFE4E6EB)
+                                      : const Color(0xFF050505),
+                                ),
                                 label: const Text('Edit Profile'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: isDark
@@ -1319,10 +1107,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 message: profile.isLocked
                                     ? 'Locked Profile (Tap to make Public)'
                                     : 'Public Profile (Tap to Lock)',
-                                child: Icon(
-                                  profile.isLocked
-                                      ? Icons.lock_rounded
-                                      : Icons.public_rounded,
+                                child: AppIcon(
+                                  icon: profile.isLocked
+                                      ? HugeIcons.strokeRoundedLockKeyhole
+                                      : HugeIcons.strokeRoundedGlobal,
                                   size: 22,
                                   color: profile.isLocked
                                       ? Colors.amber[700]
@@ -1339,364 +1127,250 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       // Personal Details Section
                       Text(
-                        'PERSONAL DETAILS',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11.5,
-                          letterSpacing: 0.8,
-                          color: theme.textTheme.bodySmall?.color,
+                        'Personal Details',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      if (profile.nickname.isNotEmpty)
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          title: Text(
-                            profile.nickname,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Nickname',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ),
-                      if (profile.email.isNotEmpty)
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          title: Text(
-                            profile.email,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Email',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ),
-                      if (profile.position.isNotEmpty)
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          title: Text(
-                            profile.position,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Position / Role',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ),
                       const SizedBox(height: 12),
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (profile.nickname.isNotEmpty) ...[
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  'Nickname',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    profile.nickname,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (profile.email.isNotEmpty ||
+                                  profile.position.isNotEmpty)
+                                Divider(color: theme.dividerColor, height: 1),
+                            ],
+                            if (profile.email.isNotEmpty) ...[
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  'Email',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    profile.email,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (profile.position.isNotEmpty)
+                                Divider(color: theme.dividerColor, height: 1),
+                            ],
+                            if (profile.position.isNotEmpty)
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  'Position / Role',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    profile.position,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (profile.nickname.isEmpty &&
+                                profile.email.isEmpty &&
+                                profile.position.isEmpty)
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                title: Text(
+                                  'No personal details added yet.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
                       // Dedicated "Center" Section
                       Text(
-                        'CENTER',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11.5,
-                          letterSpacing: 0.8,
-                          color: theme.textTheme.bodySmall?.color,
+                        'Center',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      if (localCenter.isNotEmpty)
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          title: Text(
-                            localCenter,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Local Center',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ),
-                      if (district.isNotEmpty || area.isNotEmpty)
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          title: Text(
-                            [
-                              if (district.isNotEmpty) district,
-                              if (area.isNotEmpty) area,
-                            ].join(' • '),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'District & Area',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ),
-                      if (centerAddress.isNotEmpty)
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          title: Text(
-                            centerAddress,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          subtitle: Text(
-                            'Worships at',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                          ),
-                        ),
                       const SizedBox(height: 12),
-
-                      // Visited Centers Subsection
-                      StreamBuilder<List<Map<String, dynamic>>>(
-                        stream: FirestoreService()
-                            .streamUserVisitedCenters(profile.email),
-                        builder: (context, snapshot) {
-                          final visits = snapshot.data ?? [];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          'VISITED CENTERS',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 11.5,
-                                            letterSpacing: 0.8,
-                                            color: theme
-                                                .textTheme.bodySmall?.color,
-                                          ),
-                                        ),
-                                        if (visits.isNotEmpty) ...[
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.primary
-                                                  .withValues(alpha: 0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              '${visits.length}',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color:
-                                                    theme.colorScheme.primary,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
+                      Card(
+                        margin: EdgeInsets.zero,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (localCenter.isNotEmpty) ...[
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  'Local Center',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    localCenter,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
                                     ),
-                                    if (visits.length > 3)
-                                      InkWell(
-                                        borderRadius: BorderRadius.circular(8),
-                                        onTap: () =>
-                                            _showAllVisitedCentersSheet(
-                                          context,
-                                          visits: visits,
-                                          memberName: profile.nickname.isNotEmpty
-                                              ? profile.nickname
-                                              : 'Member',
-                                        ),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 2,
-                                          ),
-                                          child: Text(
-                                            'View All',
-                                            style: TextStyle(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.bold,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              if (visits.isEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                    vertical: 4,
+                              if (district.isNotEmpty ||
+                                  area.isNotEmpty ||
+                                  centerAddress.isNotEmpty)
+                                Divider(color: theme.dividerColor, height: 1),
+                            ],
+                            if (district.isNotEmpty || area.isNotEmpty) ...[
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  'District & Area',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodySmall?.color,
                                   ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
                                   child: Text(
-                                    'No visited centers checked into yet. Tap "I\'ve Been Here" when visiting other worship centers!',
+                                    [
+                                      if (district.isNotEmpty) district,
+                                      if (area.isNotEmpty) area,
+                                    ].join(' • '),
                                     style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontStyle: FontStyle.italic,
-                                      color: theme.textTheme.bodySmall?.color,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
                                     ),
                                   ),
-                                )
-                              else
-                                Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    for (int i = 0; i < 4; i++)
-                                      if (i < visits.length)
-                                        Expanded(
-                                          child: InkWell(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            onTap: () {
-                                              final visit = visits[i];
-                                              _openCenterDetail(
-                                                context,
-                                                (visit['centerName']
-                                                            as String?)
-                                                        ?.trim() ??
-                                                    'Center',
-                                                (visit['centerAddress']
-                                                            as String?)
-                                                        ?.trim() ??
-                                                    '',
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                vertical: 6,
-                                                horizontal: 2,
-                                              ),
-                                              child: Column(
-                                                mainAxisSize:
-                                                    MainAxisSize.min,
-                                                children: [
-                                                  CircleAvatar(
-                                                    radius: 24,
-                                                    backgroundColor: isDark
-                                                        ? const Color(
-                                                            0xFF3A3B3C)
-                                                        : const Color(
-                                                            0xFFE4E6EB),
-                                                    child: Icon(
-                                                      Icons.church_rounded,
-                                                      size: 22,
-                                                      color: theme
-                                                          .colorScheme
-                                                          .primary,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 6),
-                                                  Text(
-                                                    (visits[i]['centerName']
-                                                                as String?)
-                                                            ?.trim() ??
-                                                        'Center',
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      color: theme
-                                                          .textTheme
-                                                          .bodyLarge
-                                                          ?.color,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textAlign:
-                                                        TextAlign.center,
-                                                  ),
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    _extractShortAddress(
-                                                      (visits[i]['centerAddress']
-                                                              as String?) ??
-                                                          '',
-                                                    ),
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      color: theme
-                                                          .textTheme
-                                                          .bodySmall
-                                                          ?.color,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textAlign:
-                                                        TextAlign.center,
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      else
-                                        const Expanded(child: SizedBox()),
-                                  ],
                                 ),
+                              ),
+                              if (centerAddress.isNotEmpty)
+                                Divider(color: theme.dividerColor, height: 1),
                             ],
-                          );
-                        },
+                            if (centerAddress.isNotEmpty)
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                title: Text(
+                                  'Worships at',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    centerAddress,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: theme.textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            if (localCenter.isEmpty &&
+                                district.isEmpty &&
+                                area.isEmpty &&
+                                centerAddress.isEmpty)
+                              ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                title: Text(
+                                  'No center information shared yet.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontStyle: FontStyle.italic,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 24),
                       Divider(color: theme.dividerColor, height: 1),
                       const SizedBox(height: 20),
 
@@ -1737,7 +1411,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 14),
 
                       // Horizontal Filter Chips Row
-                      if (!_isLoadingContributions && _contributions.isNotEmpty) ...[
+                      if (!_isLoadingContributions &&
+                          _contributions.isNotEmpty) ...[
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
@@ -1796,8 +1471,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: Column(
                             children: [
-                              Icon(
-                                Icons.history_rounded,
+                              AppIcon(
+                                icon: HugeIcons.strokeRoundedClock01,
                                 size: 32,
                                 color: theme.textTheme.bodySmall?.color
                                     ?.withValues(alpha: 0.6),
@@ -1843,12 +1518,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           child: Column(
                             children: [
-                              Icon(
-                                _selectedContributionCategory == 'Posts'
-                                    ? Icons.post_add_rounded
+                              AppIcon(
+                                icon: _selectedContributionCategory == 'Posts'
+                                    ? HugeIcons.strokeRoundedFileAdd
                                     : (_selectedContributionCategory == 'Songs'
-                                          ? Icons.queue_music_rounded
-                                          : Icons.edit_location_alt_rounded),
+                                          ? HugeIcons.strokeRoundedMusic02
+                                          : HugeIcons
+                                                .strokeRoundedLocationAdd01),
                                 size: 36,
                                 color: theme.textTheme.bodySmall?.color
                                     ?.withValues(alpha: 0.6),
@@ -1909,348 +1585,379 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   DateTime.now().difference(timestamp).inDays >=
                                       5;
 
-                            if (type == 'Song Suggestion') {
-                              final statusLower = status.toLowerCase();
-                              final statusColor = statusLower == 'approved'
-                                  ? Colors.green
-                                  : (statusLower == 'rejected'
-                                      ? Colors.red
-                                      : Colors.orange);
-                              final statusIcon = statusLower == 'approved'
-                                  ? Icons.check_circle_rounded
-                                  : (statusLower == 'rejected'
-                                      ? Icons.cancel_rounded
-                                      : Icons.schedule_rounded);
-                              final statusLabel = statusLower == 'approved'
-                                  ? 'Approved'
-                                  : (statusLower == 'rejected'
-                                      ? 'Rejected'
-                                      : 'Pending Review');
-                              final authorStr =
-                                  (item['author'] as String?)?.isNotEmpty == true
-                                      ? item['author']
-                                      : 'Unknown';
+                              if (type == 'Song Suggestion') {
+                                final statusLower = status.toLowerCase();
+                                final statusColor = statusLower == 'approved'
+                                    ? Colors.green
+                                    : (statusLower == 'rejected'
+                                          ? Colors.red
+                                          : Colors.orange);
+                                final statusIcon = statusLower == 'approved'
+                                    ? HugeIcons.strokeRoundedCheckmarkCircle01
+                                    : (statusLower == 'rejected'
+                                          ? HugeIcons.strokeRoundedCancel01
+                                          : HugeIcons.strokeRoundedClock01);
+                                final statusLabel = statusLower == 'approved'
+                                    ? 'Approved'
+                                    : (statusLower == 'rejected'
+                                          ? 'Rejected'
+                                          : 'Pending Review');
+                                final authorStr =
+                                    (item['author'] as String?)?.isNotEmpty ==
+                                        true
+                                    ? item['author']
+                                    : 'Unknown';
 
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                  side: BorderSide(
-                                    color: theme.dividerColor.withValues(
-                                      alpha: 0.4,
-                                    ),
-                                  ),
-                                ),
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 6,
-                                  ),
-                                  title: Text(
-                                    title.isNotEmpty ? title : 'Untitled Song',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4),
-                                    child: Text(
-                                      'By $authorStr • ${_formatDate(timestamp)}',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Tooltip(
-                                        message: statusLabel,
-                                        child: Icon(
-                                          statusIcon,
-                                          color: statusColor,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.more_horiz_rounded,
-                                          color:
-                                              theme.textTheme.bodySmall?.color,
-                                        ),
-                                        tooltip: 'Options',
-                                        onPressed: () =>
-                                            _showContributionOptions(
-                                          context,
-                                          item,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  onTap: () => _showSongSubmissionDetailsSheet(
-                                    context,
-                                    item,
-                                    theme,
-                                    isDark,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            // Type-specific body formatting
-                            Widget bodyWidget;
-                            if (type == 'Post') {
-                              bodyWidget = ExpandableText(
-                                text: title,
-                                style: theme.textTheme.bodyLarge?.copyWith(
-                                  fontSize: 14.5,
-                                  height: 1.45,
-                                  color: theme.textTheme.bodyLarge?.color,
-                                ),
-                              );
-                            } else {
-                              bodyWidget = Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Suggested Center Update',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.orangeAccent.shade700,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    subtitle,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  if (item['details'] != null &&
-                                      (item['details'] as String)
-                                          .isNotEmpty) ...[
-                                    const SizedBox(height: 12),
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: isDark
-                                            ? const Color(0xFF2A2B2C)
-                                            : const Color(0xFFEAEBED),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item['details'] as String,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              fontSize: 12,
-                                              height: 1.4,
-                                            ),
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
+                                      color: theme.dividerColor.withValues(
+                                        alpha: 0.4,
                                       ),
                                     ),
-                                  ],
-                                ],
-                              );
-                            }
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: theme.cardColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: theme.dividerColor,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ListTile(
+                                  ),
+                                  child: ListTile(
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    leading: UserAvatar(
-                                      authorName: fullNameWithInitial,
-                                      localAvatarPath: profile.avatarPath,
-                                      avatarUrl: profile.avatarUrl,
-                                      radius: 20,
+                                      vertical: 6,
                                     ),
                                     title: Text(
-                                      nickname,
+                                      title.isNotEmpty
+                                          ? title
+                                          : 'Untitled Song',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 15,
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Wrap(
-                                        spacing: 6,
-                                        runSpacing: 2,
-                                        crossAxisAlignment:
-                                            WrapCrossAlignment.center,
-                                        children: [
-                                          Text(
-                                            type,
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        'By $authorStr • ${_formatDate(timestamp)}',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Tooltip(
+                                          message: statusLabel,
+                                          child: AppIcon(
+                                            icon: statusIcon,
+                                            color: statusColor,
+                                            size: 24,
                                           ),
-                                          Text(
-                                            '•',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(fontSize: 11),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          icon: AppIcon(
+                                            icon: HugeIcons
+                                                .strokeRoundedMoreHorizontal,
+                                            color: theme
+                                                .textTheme
+                                                .bodySmall
+                                                ?.color,
                                           ),
-                                          Text(
-                                            _formatDate(timestamp),
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(fontSize: 11),
+                                          tooltip: 'Options',
+                                          onPressed: () =>
+                                              _showContributionOptions(
+                                                context,
+                                                item,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () =>
+                                        _showSongSubmissionDetailsSheet(
+                                          context,
+                                          item,
+                                          theme,
+                                          isDark,
+                                        ),
+                                  ),
+                                );
+                              }
+
+                              // Type-specific body formatting
+                              Widget bodyWidget;
+                              if (type == 'Post') {
+                                bodyWidget = ExpandableText(
+                                  text: title,
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    fontSize: 14.5,
+                                    height: 1.45,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                );
+                              } else {
+                                bodyWidget = Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Suggested Center Update',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orangeAccent.shade700,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      title,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      subtitle,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(fontSize: 12),
+                                    ),
+                                    if (item['details'] != null &&
+                                        (item['details'] as String)
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF2A2B2C)
+                                              : const Color(0xFFEAEBED),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                          Text(
-                                            '•',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(fontSize: 11),
+                                        ),
+                                        child: Text(
+                                          item['details'] as String,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                fontSize: 12,
+                                                height: 1.4,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                );
+                              }
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: theme.dividerColor,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ListTile(
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
                                           ),
-                                          Icon(
-                                            isExpiredPost
-                                                ? Icons.lock_outline_rounded
-                                                : Icons.public_rounded,
-                                            size: 12,
-                                            color: theme.textTheme.bodySmall?.color,
-                                          ),
-                                          if (status.isNotEmpty) ...[
+                                      leading: UserAvatar(
+                                        authorName: fullNameWithInitial,
+                                        localAvatarPath: profile.avatarPath,
+                                        avatarUrl: profile.avatarUrl,
+                                        radius: 20,
+                                      ),
+                                      title: Text(
+                                        nickname,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 15,
+                                        ),
+                                      ),
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Wrap(
+                                          spacing: 6,
+                                          runSpacing: 2,
+                                          crossAxisAlignment:
+                                              WrapCrossAlignment.center,
+                                          children: [
+                                            Text(
+                                              type,
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
                                             Text(
                                               '•',
                                               style: theme.textTheme.bodySmall
                                                   ?.copyWith(fontSize: 11),
                                             ),
                                             Text(
-                                              isExpiredPost
-                                                  ? 'Expired'
-                                                  : (status == 'approved'
-                                                        ? 'Approved'
-                                                        : (status == 'rejected'
-                                                              ? 'Rejected'
-                                                              : (status == 'pending'
-                                                                    ? 'Pending'
-                                                                    : (status == 'reported'
-                                                                          ? 'Reported'
-                                                                          : 'Active')))),
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
-                                                color: isExpiredPost
-                                                    ? Colors.grey.shade600
-                                                    : (status == 'approved'
-                                                          ? Colors.green.shade800
-                                                          : (status == 'rejected'
-                                                                ? Colors.red.shade800
-                                                                : (status == 'pending'
-                                                                      ? Colors.orange.shade800
-                                                                      : (status == 'reported'
-                                                                            ? Colors.red.shade800
-                                                                            : Colors.green.shade800)))),
-                                              ),
+                                              _formatDate(timestamp),
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(fontSize: 11),
                                             ),
+                                            Text(
+                                              '•',
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(fontSize: 11),
+                                            ),
+                                            AppIcon(
+                                              icon: isExpiredPost
+                                                  ? HugeIcons
+                                                        .strokeRoundedLockKey
+                                                  : HugeIcons
+                                                        .strokeRoundedGlobal,
+                                              size: 12,
+                                              color: theme
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color,
+                                            ),
+                                            if (status.isNotEmpty) ...[
+                                              Text(
+                                                '•',
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(fontSize: 11),
+                                              ),
+                                              Text(
+                                                isExpiredPost
+                                                    ? 'Expired'
+                                                    : (status == 'approved'
+                                                          ? 'Approved'
+                                                          : (status ==
+                                                                    'rejected'
+                                                                ? 'Rejected'
+                                                                : (status ==
+                                                                          'pending'
+                                                                      ? 'Pending'
+                                                                      : (status ==
+                                                                                'reported'
+                                                                            ? 'Reported'
+                                                                            : 'Active')))),
+                                                style: theme.textTheme.bodySmall?.copyWith(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isExpiredPost
+                                                      ? Colors.grey.shade600
+                                                      : (status == 'approved'
+                                                            ? Colors
+                                                                  .green
+                                                                  .shade800
+                                                            : (status ==
+                                                                      'rejected'
+                                                                  ? Colors
+                                                                        .red
+                                                                        .shade800
+                                                                  : (status ==
+                                                                            'pending'
+                                                                        ? Colors
+                                                                              .orange
+                                                                              .shade800
+                                                                        : (status == 'reported'
+                                                                              ? Colors.red.shade800
+                                                                              : Colors.green.shade800)))),
+                                                ),
+                                              ),
+                                            ],
                                           ],
-                                        ],
+                                        ),
+                                      ),
+                                      trailing: IconButton(
+                                        icon: AppIcon(
+                                          icon: HugeIcons
+                                              .strokeRoundedMoreHorizontal,
+                                          color:
+                                              theme.textTheme.bodySmall?.color,
+                                        ),
+                                        tooltip: 'Contribution options',
+                                        onPressed: () =>
+                                            _showContributionOptions(
+                                              context,
+                                              item,
+                                            ),
                                       ),
                                     ),
-                                    trailing: IconButton(
-                                      icon: Icon(
-                                        Icons.more_horiz_rounded,
-                                        color: theme.textTheme.bodySmall?.color,
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 16,
+                                        right: 16,
+                                        bottom: 16,
                                       ),
-                                      tooltip: 'Contribution options',
-                                      onPressed: () => _showContributionOptions(
-                                        context,
-                                        item,
-                                      ),
+                                      child: bodyWidget,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        }(),
+                        () {
+                          final filteredList = _contributions.where((i) {
+                            if (_selectedContributionCategory == 'Posts') {
+                              return i['type'] == 'Post';
+                            }
+                            if (_selectedContributionCategory == 'Songs') {
+                              return i['type'] == 'Song Suggestion';
+                            }
+                            if (_selectedContributionCategory == 'Centers') {
+                              return i['type'] == 'Center Update';
+                            }
+                            return true;
+                          }).toList();
+
+                          if (filteredList.length > _visibleCount) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Center(
+                                child: FilledButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _visibleCount += 10;
+                                    });
+                                  },
+                                  icon: const AppIcon(
+                                    icon: HugeIcons.strokeRoundedArrowDown01,
+                                    size: 18,
+                                  ),
+                                  label: const Text(
+                                    'Load More',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 16,
-                                      right: 16,
-                                      bottom: 16,
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
                                     ),
-                                    child: bodyWidget,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
-                                ],
+                                ),
                               ),
                             );
-                          },
-                        );
-                      }(),
-                      () {
-                        final filteredList = _contributions.where((i) {
-                          if (_selectedContributionCategory == 'Posts') {
-                            return i['type'] == 'Post';
                           }
-                          if (_selectedContributionCategory == 'Songs') {
-                            return i['type'] == 'Song Suggestion';
-                          }
-                          if (_selectedContributionCategory == 'Centers') {
-                            return i['type'] == 'Center Update';
-                          }
-                          return true;
-                        }).toList();
-
-                        if (filteredList.length > _visibleCount) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 12),
-                            child: Center(
-                              child: FilledButton.icon(
-                                onPressed: () {
-                                  setState(() {
-                                    _visibleCount += 10;
-                                  });
-                                },
-                                icon: const Icon(
-                                  Icons.expand_more_rounded,
-                                  size: 18,
-                                ),
-                                label: const Text(
-                                  'Load More',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      }(),
-                    ],
+                          return const SizedBox.shrink();
+                        }(),
+                      ],
                       const SizedBox(height: 24),
                     ],
                   ),

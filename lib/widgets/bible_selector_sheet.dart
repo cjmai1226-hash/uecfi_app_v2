@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import '../services/database_helper.dart';
 
 const Set<String> newTestamentBookIds = {
@@ -72,6 +73,7 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
   bool _isLoadingVerses = false;
 
   String _bookSearchQuery = '';
+  final TextEditingController _bookSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -90,6 +92,7 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
   @override
   void dispose() {
     _tabController.dispose();
+    _bookSearchController.dispose();
     super.dispose();
   }
 
@@ -205,8 +208,8 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               children: [
-                Icon(
-                  Icons.auto_stories_rounded,
+                AppIcon(
+                  icon: HugeIcons.strokeRoundedBookOpen01,
                   size: 20,
                   color: theme.colorScheme.primary,
                 ),
@@ -255,8 +258,8 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
                   children: [
                     const Text('1. Book'),
                     const SizedBox(width: 4),
-                    Icon(
-                      Icons.chevron_right_rounded,
+                    AppIcon(
+                      icon: HugeIcons.strokeRoundedArrowRight01,
                       size: 16,
                       color: theme.dividerColor,
                     ),
@@ -269,8 +272,8 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
                   children: [
                     const Text('2. Chapter'),
                     const SizedBox(width: 4),
-                    Icon(
-                      Icons.chevron_right_rounded,
+                    AppIcon(
+                      icon: HugeIcons.strokeRoundedArrowRight01,
                       size: 16,
                       color: theme.dividerColor,
                     ),
@@ -318,18 +321,61 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
         // Quick filter input
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: TextField(
-            onChanged: (val) => setState(() => _bookSearchQuery = val),
-            decoration: InputDecoration(
-              hintText: 'Filter books (e.g. Genesis, Mateo)...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 18),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              filled: true,
-              fillColor: isDark ? const Color(0xFF2A2B2E) : const Color(0xFFF0F2F5),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              color: isDark
+                  ? const Color(0xFF1E1E2A)
+                  : const Color(0xFFEEEEF4),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.dividerColor.withValues(alpha: 0.6),
+                width: 1,
               ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                AppIcon(
+                  icon: HugeIcons.strokeRoundedSearch01,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: TextField(
+                    controller: _bookSearchController,
+                    onChanged: (val) => setState(() => _bookSearchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'Filter books (e.g. Genesis, Mateo)...',
+                      filled: false,
+                      hoverColor: Colors.transparent,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                      hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.textTheme.bodySmall?.color
+                            ?.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    style: theme.textTheme.bodyLarge,
+                  ),
+                ),
+                if (_bookSearchQuery.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _bookSearchController.clear();
+                      setState(() => _bookSearchQuery = '');
+                    },
+                    child: AppIcon(
+                      icon: HugeIcons.strokeRoundedCancel01,
+                      size: 18,
+                      color: theme.textTheme.bodySmall?.color,
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -468,14 +514,14 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
 
                     // Trailing chevron or checkmark
                     if (isSelected)
-                      Icon(
-                        Icons.check_circle_rounded,
+                      AppIcon(
+                        icon: HugeIcons.strokeRoundedCheckmarkCircle01,
                         color: theme.colorScheme.primary,
                         size: 18,
                       )
                     else
-                      Icon(
-                        Icons.chevron_right_rounded,
+                      AppIcon(
+                        icon: HugeIcons.strokeRoundedArrowRight01,
                         color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                         size: 20,
                       ),
@@ -499,7 +545,7 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.menu_book_rounded, size: 48, color: Colors.grey),
+            const AppIcon(icon: HugeIcons.strokeRoundedBook02, size: 48, color: Colors.grey),
             const SizedBox(height: 12),
             const Text('Please select a book first.'),
             const SizedBox(height: 12),
@@ -562,7 +608,7 @@ class _BibleSelectorSheetState extends State<BibleSelectorSheet>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.format_list_numbered_rounded, size: 48, color: Colors.grey),
+            const AppIcon(icon: HugeIcons.strokeRoundedLeftToRightListNumber, size: 48, color: Colors.grey),
             const SizedBox(height: 12),
             const Text('No verses found for this chapter.'),
             const SizedBox(height: 12),

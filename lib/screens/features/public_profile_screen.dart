@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../widgets/user_avatar.dart';
-import '../../widgets/contributor_badge.dart';
 import '../../widgets/community_post_card.dart';
 import '../../models/blog_post.dart';
 import '../../services/user_service.dart';
 import '../../services/firestore_service.dart';
-import '../../services/database_helper.dart';
-import '../../models/center_model.dart';
-import '../details/center_detail_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
 
@@ -91,7 +88,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       // Fetch member contributions breakdown
       if (cleanEmail.isNotEmpty) {
         try {
-          final items = await FirestoreService().getUserContributions(cleanEmail);
+          final items = await FirestoreService().getUserContributions(
+            cleanEmail,
+          );
           if (mounted) {
             setState(() {
               _contributions = items;
@@ -207,7 +206,11 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 26),
+              icon: const AppIcon(
+                icon: HugeIcons.strokeRoundedCancel01,
+                color: Colors.white,
+                size: 26,
+              ),
               onPressed: () => Navigator.of(dialogContext).pop(),
             ),
           ),
@@ -226,248 +229,22 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+                      AppIcon(
+                        icon: HugeIcons.strokeRoundedImage01,
+                        color: Colors.white54,
+                        size: 48,
+                      ),
                       SizedBox(height: 8),
-                      Text('Unable to load photo', style: TextStyle(color: Colors.white70)),
+                      Text(
+                        'Unable to load photo',
+                        style: TextStyle(color: Colors.white70),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Future<void> _openCenterDetail(
-    BuildContext context,
-    String centerName,
-    String centerAddress,
-  ) async {
-    try {
-      final allCenters = await DatabaseHelper.getAllCenters();
-      final match = allCenters.firstWhere(
-        (c) => c.name.trim().toLowerCase() == centerName.trim().toLowerCase(),
-        orElse: () => CenterModel(
-          name: centerName,
-          address: centerAddress,
-          district: '',
-          area: '',
-          location: '',
-          contact: '',
-          status: 'Active',
-          history: '',
-          page: '',
-        ),
-      );
-      if (context.mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CenterDetailScreen(center: match),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error opening center detail: $e');
-    }
-  }
-
-  String _extractShortAddress(String rawAddress) {
-    final clean = rawAddress.trim();
-    if (clean.isEmpty) return 'Center';
-    final parts = clean.split(',');
-    if (parts.isNotEmpty && parts.first.trim().isNotEmpty) {
-      return parts.first.trim();
-    }
-    return clean;
-  }
-
-  void _showAllVisitedCentersSheet(
-    BuildContext context, {
-    required List<Map<String, dynamic>> visits,
-    required String memberName,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-
-        return DraggableScrollableSheet(
-          initialChildSize: 0.65,
-          minChildSize: 0.4,
-          maxChildSize: 0.92,
-          expand: false,
-          builder: (context, scrollController) {
-            return SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  // Top Drag Handle Pill
-                  Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.dividerColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-
-                  // Header Row
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Visited Centers',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${visits.length}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(color: theme.dividerColor, height: 1),
-
-                  // List of Centers
-                  Expanded(
-                    child: ListView.separated(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      itemCount: visits.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final visit = visits[index];
-                        final centerName =
-                            (visit['centerName'] as String?)?.trim() ??
-                                'Worship Center';
-                        final centerAddress =
-                            (visit['centerAddress'] as String?)?.trim() ?? '';
-                        final dynamic timestamp = visit['visitedAt'];
-                        String dateStr = '';
-                        if (timestamp is Timestamp) {
-                          final dt = timestamp.toDate();
-                          final months = [
-                            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-                          ];
-                          dateStr =
-                              'Visited on ${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-                        }
-
-                        return Card(
-                          margin: EdgeInsets.zero,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: BorderSide(
-                              color: theme.dividerColor.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
-                            ),
-                            leading: CircleAvatar(
-                              backgroundColor: theme.colorScheme.primary
-                                  .withValues(alpha: 0.1),
-                              child: Icon(
-                                Icons.place_rounded,
-                                color: theme.colorScheme.primary,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              centerName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            subtitle: (centerAddress.isNotEmpty ||
-                                    dateStr.isNotEmpty)
-                                ? Text(
-                                    [
-                                      if (centerAddress.isNotEmpty)
-                                        centerAddress,
-                                      if (dateStr.isNotEmpty) dateStr,
-                                    ].join(' • '),
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: theme.textTheme.bodySmall?.color,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  )
-                                : null,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              size: 20,
-                            ),
-                            onTap: () {
-                              Navigator.of(sheetContext).pop();
-                              _openCenterDetail(
-                                context,
-                                centerName,
-                                centerAddress,
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
         );
       },
     );
@@ -511,7 +288,6 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         '';
     final String centerAddress = _userData?['centerAddress'] ?? '';
     final String position = _userData?['position'] ?? 'Member';
-    final int contributions = _userData?['contributions'] as int? ?? 0;
     final bool isLocked = _userData?['isLocked'] == true;
 
     final bool isSelf =
@@ -527,13 +303,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.search_rounded),
+            icon: const AppIcon(
+              icon: HugeIcons.strokeRoundedSearch01,
+              size: 22,
+            ),
             tooltip: 'Search',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SearchScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
               );
             },
           ),
@@ -552,10 +329,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 GestureDetector(
                   onTap: coverUrl != null && coverUrl.isNotEmpty
                       ? () => _showFullScreenImageViewer(
-                            context,
-                            imageUrl: coverUrl,
-                            title: '$displayName\'s Cover Photo',
-                          )
+                          context,
+                          imageUrl: coverUrl,
+                          title: '$displayName\'s Cover Photo',
+                        )
                       : null,
                   child: Container(
                     height: 300,
@@ -565,7 +342,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                           ? LinearGradient(
                               colors: [
                                 theme.colorScheme.primary,
-                                theme.colorScheme.primary.withValues(alpha: 0.8),
+                                theme.colorScheme.primary.withValues(
+                                  alpha: 0.8,
+                                ),
                               ],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
@@ -590,10 +369,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     child: GestureDetector(
                       onTap: avatarUrl != null && avatarUrl.isNotEmpty
                           ? () => _showFullScreenImageViewer(
-                                context,
-                                imageUrl: avatarUrl,
-                                title: '$displayName\'s Profile Photo',
-                              )
+                              context,
+                              imageUrl: avatarUrl,
+                              title: '$displayName\'s Profile Photo',
+                            )
                           : null,
                       child: Container(
                         decoration: BoxDecoration(
@@ -658,14 +437,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         ),
                         if (isDevChristian) ...[
                           const SizedBox(width: 6),
-                          Icon(
-                            Icons.verified_rounded,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedCheckmarkBadge01,
                             color: theme.colorScheme.primary,
                             size: 20,
                           ),
                         ],
-                        const SizedBox(width: 6),
-                        getContributorBadge(contributions, theme, size: 20),
                       ],
                     ),
                   ),
@@ -674,28 +451,34 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   Builder(
                     builder: (context) {
                       final int postCount = _contributions
-                          .where((item) =>
-                              (item['type'] ?? '')
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains('post') &&
-                              item['status'] != 'reported')
+                          .where(
+                            (item) =>
+                                (item['type'] ?? '')
+                                    .toString()
+                                    .toLowerCase()
+                                    .contains('post') &&
+                                item['status'] != 'reported',
+                          )
                           .length;
                       final int songCount = _contributions
-                          .where((item) =>
-                              (item['type'] ?? '')
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains('song') &&
-                              item['status'] != 'reported')
+                          .where(
+                            (item) =>
+                                (item['type'] ?? '')
+                                    .toString()
+                                    .toLowerCase()
+                                    .contains('song') &&
+                                item['status'] != 'reported',
+                          )
                           .length;
                       final int centerCount = _contributions
-                          .where((item) =>
-                              (item['type'] ?? '')
-                                  .toString()
-                                  .toLowerCase()
-                                  .contains('center') &&
-                              item['status'] != 'reported')
+                          .where(
+                            (item) =>
+                                (item['type'] ?? '')
+                                    .toString()
+                                    .toLowerCase()
+                                    .contains('center') &&
+                                item['status'] != 'reported',
+                          )
                           .length;
 
                       return Padding(
@@ -769,7 +552,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             ),
                           );
                         },
-                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        icon: AppIcon(
+                          icon: HugeIcons.strokeRoundedEdit02,
+                          size: 18,
+                          color: isDark
+                              ? const Color(0xFFE4E6EB)
+                              : const Color(0xFF050505),
+                        ),
                         label: const Text('Edit Profile'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isDark
@@ -816,8 +605,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                                 shape: BoxShape.circle,
                                 color: Colors.amber.withValues(alpha: 0.12),
                               ),
-                              child: const Icon(
-                                Icons.shield_rounded,
+                              child: const AppIcon(
+                                icon: HugeIcons.strokeRoundedLockKeyhole,
                                 size: 36,
                                 color: Colors.amber,
                               ),
@@ -850,347 +639,201 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   else ...[
                     // Personal Details Section
                     Text(
-                      'PERSONAL DETAILS',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11.5,
-                        letterSpacing: 0.8,
-                        color: theme.textTheme.bodySmall?.color,
+                      'Personal Details',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 2,
-                      ),
-                      title: Text(
-                        displayName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'Name',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.textTheme.bodySmall?.color,
-                        ),
-                      ),
-                    ),
-                    if (position.isNotEmpty)
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        title: Text(
-                          position,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Position / Role',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.textTheme.bodySmall?.color,
-                          ),
-                        ),
-                      ),
                     const SizedBox(height: 12),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            title: Text(
+                              'Name',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                displayName,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (position.isNotEmpty) ...[
+                            Divider(color: theme.dividerColor, height: 1),
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                'Position / Role',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  position,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                     Divider(color: theme.dividerColor, height: 1),
                     const SizedBox(height: 20),
 
                     // Dedicated "Center" Section
                     Text(
-                      'CENTER',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11.5,
-                        letterSpacing: 0.8,
-                        color: theme.textTheme.bodySmall?.color,
+                      'Center',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    if (localCenter.isNotEmpty)
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        title: Text(
-                          localCenter,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Local Center',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.textTheme.bodySmall?.color,
-                          ),
-                        ),
-                      ),
-                    if (district.isNotEmpty || area.isNotEmpty)
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        title: Text(
-                          [
-                            if (district.isNotEmpty) district,
-                            if (area.isNotEmpty) area,
-                          ].join(' • '),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'District & Area',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.textTheme.bodySmall?.color,
-                          ),
-                        ),
-                      ),
-                    if (centerAddress.isNotEmpty)
-                      ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 2,
-                        ),
-                        title: Text(
-                          centerAddress,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Worships at',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: theme.textTheme.bodySmall?.color,
-                          ),
-                        ),
-                      ),
                     const SizedBox(height: 12),
-
-                    // Visited Centers Subsection
-                    Builder(
-                      builder: (context) {
-                        final targetEmail = widget.userEmail.isNotEmpty
-                            ? widget.userEmail
-                            : (_userData?['email'] as String? ?? '');
-                        return StreamBuilder<List<Map<String, dynamic>>>(
-                          stream: FirestoreService()
-                              .streamUserVisitedCenters(targetEmail),
-                          builder: (context, snapshot) {
-                            final visits = snapshot.data ?? [];
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            'VISITED CENTERS',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 11.5,
-                                              letterSpacing: 0.8,
-                                              color: theme
-                                                  .textTheme.bodySmall?.color,
-                                            ),
-                                          ),
-                                          if (visits.isNotEmpty) ...[
-                                            const SizedBox(width: 6),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: theme.colorScheme.primary
-                                                    .withValues(alpha: 0.12),
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                '${visits.length}',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      if (visits.length > 3)
-                                        InkWell(
-                                          borderRadius: BorderRadius.circular(8),
-                                          onTap: () =>
-                                              _showAllVisitedCentersSheet(
-                                            context,
-                                            visits: visits,
-                                            memberName: displayName,
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 4,
-                                              vertical: 2,
-                                            ),
-                                            child: Text(
-                                              'View All',
-                                              style: TextStyle(
-                                                fontSize: 12.5,
-                                                fontWeight: FontWeight.bold,
-                                                color: theme.colorScheme.primary,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (localCenter.isNotEmpty) ...[
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                'Local Center',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  localCenter,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: theme.textTheme.bodyLarge?.color,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                if (visits.isEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 4,
-                                    ),
-                                    child: Text(
-                                      'No visited centers recorded yet.',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontStyle: FontStyle.italic,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      for (int i = 0; i < 4; i++)
-                                        if (i < visits.length)
-                                          Expanded(
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              onTap: () {
-                                                final visit = visits[i];
-                                                _openCenterDetail(
-                                                  context,
-                                                  (visit['centerName']
-                                                              as String?)
-                                                          ?.trim() ??
-                                                      'Center',
-                                                  (visit['centerAddress']
-                                                              as String?)
-                                                          ?.trim() ??
-                                                      '',
-                                                );
-                                              },
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  vertical: 6,
-                                                  horizontal: 2,
-                                                ),
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    CircleAvatar(
-                                                      radius: 24,
-                                                      backgroundColor: isDark
-                                                          ? const Color(
-                                                              0xFF3A3B3C)
-                                                          : const Color(
-                                                              0xFFE4E6EB),
-                                                      child: Icon(
-                                                        Icons.church_rounded,
-                                                        size: 22,
-                                                        color: theme
-                                                            .colorScheme
-                                                            .primary,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 6),
-                                                    Text(
-                                                      (visits[i]['centerName']
-                                                                  as String?)
-                                                              ?.trim() ??
-                                                          'Center',
-                                                      style: TextStyle(
-                                                        fontSize: 12,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color: theme
-                                                            .textTheme
-                                                            .bodyLarge
-                                                            ?.color,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow
-                                                          .ellipsis,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      _extractShortAddress(
-                                                        (visits[i]['centerAddress']
-                                                                as String?) ??
-                                                            '',
-                                                      ),
-                                                      style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: theme
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.color,
-                                                      ),
-                                                      maxLines: 1,
-                                                      overflow: TextOverflow
-                                                          .ellipsis,
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        else
-                                          const Expanded(child: SizedBox()),
-                                    ],
+                              ),
+                            ),
+                            if (district.isNotEmpty ||
+                                area.isNotEmpty ||
+                                centerAddress.isNotEmpty)
+                              Divider(color: theme.dividerColor, height: 1),
+                          ],
+                          if (district.isNotEmpty || area.isNotEmpty) ...[
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                'District & Area',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  [
+                                    if (district.isNotEmpty) district,
+                                    if (area.isNotEmpty) area,
+                                  ].join(' • '),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: theme.textTheme.bodyLarge?.color,
                                   ),
-                              ],
-                            );
-                          },
-                        );
-                      },
+                                ),
+                              ),
+                            ),
+                            if (centerAddress.isNotEmpty)
+                              Divider(color: theme.dividerColor, height: 1),
+                          ],
+                          if (centerAddress.isNotEmpty)
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 4,
+                              ),
+                              title: Text(
+                                'Worships at',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  centerAddress,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: theme.textTheme.bodyLarge?.color,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          if (localCenter.isEmpty &&
+                              district.isEmpty &&
+                              area.isEmpty &&
+                              centerAddress.isEmpty)
+                            ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              title: Text(
+                                'No center information shared yet.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontStyle: FontStyle.italic,
+                                  color: theme.textTheme.bodySmall?.color,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 24),
                     Divider(color: theme.dividerColor, height: 1),
                     const SizedBox(height: 20),
 
@@ -1248,8 +891,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     child: Column(
                       children: [
-                        Icon(
-                          Icons.article_outlined,
+                        AppIcon(
+                          icon: HugeIcons.strokeRoundedNews,
                           size: 48,
                           color: theme.hintColor.withValues(alpha: 0.5),
                         ),

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/database_helper.dart';
 import '../../services/prayer_language_service.dart';
 import '../../models/prayer_model.dart';
 import '../details/prayer_detail_screen.dart';
-import '../../services/ad_service.dart';
 
 class PrayersScreen extends StatefulWidget {
   const PrayersScreen({super.key});
@@ -57,7 +57,6 @@ class _PrayersScreenState extends State<PrayersScreen> {
       valueListenable: PrayerLanguageService.instance,
       builder: (context, langCode, child) {
         return Scaffold(
-          bottomNavigationBar: const AdBannerWidget(),
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _prayers.isEmpty
@@ -65,9 +64,9 @@ class _PrayersScreenState extends State<PrayersScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.import_contacts_outlined,
-                            size: 48,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedBookOpen01,
+                            size: 44,
                             color: theme.textTheme.bodySmall?.color,
                           ),
                           const SizedBox(height: 12),
@@ -102,53 +101,49 @@ class _PrayersScreenState extends State<PrayersScreen> {
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                  // Capitalized Prayer Title
+                                  Text.rich(
+                                    TextSpan(
+                                      style:
+                                          theme.textTheme.titleMedium?.copyWith(
+                                        fontSize: 15.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                       children: [
-                                        // Capitalized Prayer Title
-                                        Text(
-                                          _capitalizeTitle(title),
-                                          style: theme.textTheme.titleMedium
-                                              ?.copyWith(
-                                            fontSize: 15.5,
-                                            fontWeight: FontWeight.bold,
+                                        TextSpan(
+                                          text: '| ',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w900,
                                           ),
                                         ),
-                                        if (content.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-
-                                          // Content Preview (1 Maxline)
-                                          Text(
-                                            content
-                                                .replaceAll(
-                                                    RegExp(r'\s+'), ' ')
-                                                .trim(),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: theme
-                                                .textTheme.bodyMedium
-                                                ?.copyWith(
-                                              fontSize: 13,
-                                              color: theme.textTheme
-                                                  .bodySmall?.color,
-                                            ),
-                                          ),
-                                        ],
+                                        TextSpan(
+                                          text: _capitalizeTitle(title),
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  if (content.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
 
-                                  // Trailing Chevron Icon
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: theme.hintColor,
-                                    size: 22,
-                                  ),
+                                    // Content Preview (2 Maxlines)
+                                    Text(
+                                      content
+                                          .replaceAll(RegExp(r'\s+'), ' ')
+                                          .trim(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.bodyMedium?.copyWith(
+                                        fontSize: 13,
+                                        color:
+                                            theme.textTheme.bodySmall?.color,
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

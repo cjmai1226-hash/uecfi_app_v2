@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/user_service.dart';
 import '../../models/user_profile.dart';
@@ -6,6 +7,7 @@ import '../../services/firestore_service.dart';
 import '../forms/create_post_screen.dart';
 import '../../models/blog_post.dart';
 import '../../widgets/community_post_card.dart';
+import '../history/uecfi_history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -109,62 +111,164 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Community Feed Header with Trailing Create Post Button
+                  // Heritage & Truth Featured Banner
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF8A2387),
+                            Color(0xFFE94057),
+                            Color(0xFFF27121),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE94057).withValues(alpha: 0.35),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const UecfiHistoryScreen(),
+                              ),
+                            );
+                          },
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: -15,
+                                bottom: -20,
+                                child: AppIcon(
+                                  icon: HugeIcons.strokeRoundedBookOpen01,
+                                  size: 120,
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.22),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              AppIcon(
+                                                icon: HugeIcons.strokeRoundedSparkles,
+                                                size: 13,
+                                                color: Colors.white,
+                                              ),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'HERITAGE & TRUTH',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 10.5,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.18),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                'Explore',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                ),
+                                              ),
+                                              SizedBox(width: 4),
+                                              AppIcon(
+                                                icon: HugeIcons.strokeRoundedArrowRight01,
+                                                size: 12,
+                                                color: Colors.white,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      'Discover Our Sacred Roots',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -0.4,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Explore the founding story, the brave pioneers of 1900, and church doctrines.',
+                                      style: TextStyle(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.92),
+                                        fontSize: 12.5,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Community Feed Header
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Community Feed',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const CreatePostScreen(),
-                              ),
-                            ).then((_) => _fetchPosts());
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add_rounded,
-                                  size: 18,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Create Post',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'Community Feed',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
 
@@ -215,9 +319,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                Icons.feed_outlined,
-                                size: 48,
+                              child: AppIcon(
+                                icon: HugeIcons.strokeRoundedNews,
+                                size: 44,
                                 color: theme.colorScheme.primary,
                               ),
                             ),
@@ -250,7 +354,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ),
                                   );
                                 },
-                                icon: const Icon(Icons.edit_note_rounded),
+                                icon: const AppIcon(
+                                  icon: HugeIcons.strokeRoundedEdit02,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
                                 label: const Text(
                                   'Create a post now',
                                   style: TextStyle(

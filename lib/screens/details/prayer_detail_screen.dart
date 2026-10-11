@@ -35,6 +35,7 @@ class PrayerDetailScreen extends StatefulWidget {
 
 class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
   double _fontSize = 19.0;
+  bool _showCollapsedTitle = false;
 
   /// Open Font Size Slider Bottom Sheet
   void _showFontSizeSlider(BuildContext context) {
@@ -142,82 +143,111 @@ class _PrayerDetailScreenState extends State<PrayerDetailScreen> {
         final displayTitle = _capitalizeTitle(title);
 
         return Scaffold(
-          appBar: AppBar(
-            title: Image.asset(
-              'assets/images/brand_mark.png',
-              height: 32,
-              width: 32,
-              fit: BoxFit.contain,
-            ),
-            centerTitle: true,
-            elevation: 0,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.format_size_rounded),
-                tooltip: 'Adjust Font Size',
-                onPressed: () => _showFontSizeSlider(context),
-              ),
-              const SizedBox(width: 4),
-            ],
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  displayTitle,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Category Badge
-                if (currentPrayer.category.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.brightness == Brightness.dark
-                          ? const Color(0xFF3A3B3C)
-                          : const Color(0xFFE4E6EB),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+          body: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.axis == Axis.vertical) {
+                final isCollapsed = notification.metrics.pixels > 40;
+                if (isCollapsed != _showCollapsedTitle) {
+                  setState(() {
+                    _showCollapsedTitle = isCollapsed;
+                  });
+                }
+              }
+              return false;
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  elevation: 0,
+                  scrolledUnderElevation: 1,
+                  backgroundColor: theme.scaffoldBackgroundColor,
+                  surfaceTintColor: Colors.transparent,
+                  title: AnimatedOpacity(
+                    opacity: _showCollapsedTitle ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
                     child: Text(
-                      currentPrayer.category,
-                      style: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontSize: 12,
+                      displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                ] else
-                  const SizedBox(height: 8),
-
-                // Main Content Reader
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                    horizontal: 4,
-                  ),
-                  child: SelectableText(
-                    content.isNotEmpty
-                        ? content
-                        : 'No prayer content available.',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontSize: _fontSize,
-                      height: 1.8,
-                      color: context.contentColor,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.format_size_rounded),
+                      tooltip: 'Adjust Font Size (${_fontSize.toInt()} px)',
+                      onPressed: () => _showFontSizeSlider(context),
+                    ),
+                    const SizedBox(width: 4),
+                  ],
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          displayTitle,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            height: 1.35,
+                          ),
+                        ),
+                        if (currentPrayer.category.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Text(
+                              currentPrayer.category,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+                  sliver: SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 4,
+                      ),
+                      child: SelectableText(
+                        content.isNotEmpty
+                            ? content
+                            : 'No prayer content available.',
+                        textAlign: TextAlign.justify,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontSize: _fontSize,
+                          height: 1.8,
+                          color: context.contentColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

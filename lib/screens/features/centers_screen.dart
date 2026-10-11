@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/database_helper.dart';
 import '../../models/center_model.dart';
 import '../details/center_detail_screen.dart';
-import '../../services/ad_service.dart';
-import '../forms/suggest_new_center_screen.dart';
 
 class CentersScreen extends StatefulWidget {
   const CentersScreen({super.key});
@@ -47,71 +46,10 @@ class _CentersScreenState extends State<CentersScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      bottomNavigationBar: const AdBannerWidget(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Worship Centers',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const SuggestNewCenterScreen(),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add_location_alt_rounded,
-                                  size: 16,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Suggest Center',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 if (_centers.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
@@ -119,9 +57,9 @@ class _CentersScreenState extends State<CentersScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.church_outlined,
-                            size: 48,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedChurch,
+                            size: 44,
                             color: theme.textTheme.bodySmall?.color,
                           ),
                           const SizedBox(height: 12),
@@ -153,134 +91,74 @@ class _CentersScreenState extends State<CentersScreen> {
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // District & Area Badges
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (center.district.isNotEmpty)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 9,
-                                                      vertical: 3,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .primary
-                                                      .withValues(alpha: 0.12),
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  border: Border.all(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary
-                                                        .withValues(
-                                                          alpha: 0.25,
-                                                        ),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  center.district,
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .primary,
-                                                  ),
-                                                ),
-                                              ),
-                                            if (center.area.isNotEmpty) ...[
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 3,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .secondary
-                                                      .withValues(alpha: 0.12),
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                  border: Border.all(
-                                                    color: theme
-                                                        .colorScheme
-                                                        .secondary
-                                                        .withValues(
-                                                          alpha: 0.25,
-                                                        ),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: Text(
-                                                  center.area.startsWith('Area')
-                                                      ? center.area
-                                                      : 'Area ${center.area}',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .secondary,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-
-                                        // Center Name Title
-                                        Text(
-                                          center.name,
-                                          style: theme.textTheme.titleMedium
-                                              ?.copyWith(
-                                                fontSize: 15.5,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                        if (center.address.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-
-                                          // Address Snippet (1 Maxline)
-                                          Text(
-                                            center.address
-                                                .replaceAll(RegExp(r'\s+'), ' ')
-                                                .trim(),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(
-                                                  fontSize: 13,
-                                                  color: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.color,
-                                                ),
+                                  // Center Name Title
+                                  Text.rich(
+                                    TextSpan(
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontSize: 15.5,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                        ],
+                                      children: [
+                                        TextSpan(
+                                          text: '| ',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: center.name,
+                                        ),
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
-
-                                  // Trailing Chevron Icon
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: theme.hintColor,
-                                    size: 22,
+                                  Builder(
+                                    builder: (context) {
+                                      final locationParts = [
+                                        if (center.district.isNotEmpty)
+                                          center.district,
+                                        if (center.area.isNotEmpty)
+                                          center.area.startsWith('Area')
+                                              ? center.area
+                                              : 'Area ${center.area}',
+                                        if (center.address.isNotEmpty)
+                                          center.address
+                                              .replaceAll(
+                                                RegExp(r'\s+'),
+                                                ' ',
+                                              )
+                                              .trim(),
+                                      ];
+                                      if (locationParts.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 4,
+                                        ),
+                                        child: Text(
+                                          locationParts.join(' • '),
+                                          maxLines: 2,
+                                          overflow:
+                                              TextOverflow.ellipsis,
+                                          style: theme
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                fontSize: 13,
+                                                color: theme
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.color,
+                                              ),
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),

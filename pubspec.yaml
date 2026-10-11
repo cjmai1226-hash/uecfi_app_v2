@@ -1,7 +1,7 @@
 name: uecfi_app_v2
-description: "A new Flutter project for UECFI."
+description: "Legacy Project for uecfi_app_vanilla"
 publish_to: 'none'
-version: 2.1.6+47
+version: 2.1.8+49
 
 environment:
   sdk: ^3.11.5
@@ -26,6 +26,7 @@ dependencies:
   firebase_storage: ^13.5.0
   cached_network_image: ^3.4.1
   google_fonts: ^6.2.1
+  hugeicons: ^1.2.0
 
 dev_dependencies:
   flutter_test:

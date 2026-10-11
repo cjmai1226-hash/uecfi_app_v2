@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/database_helper.dart';
 import '../../models/song_model.dart';
 import 'bookmarks_screen.dart';
-import '../forms/submit_song_screen.dart';
 import '../details/song_detail_screen.dart';
-import '../../services/ad_service.dart';
 
 class SongsScreen extends StatefulWidget {
   const SongsScreen({super.key});
@@ -46,70 +45,10 @@ class _SongsScreenState extends State<SongsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      bottomNavigationBar: const AdBannerWidget(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Hymns & Songs',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SubmitSongScreen(),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.12,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add_rounded,
-                                  size: 18,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Submit Song',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.primary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
                 if (_songs.isEmpty)
                   SliverFillRemaining(
                     hasScrollBody: false,
@@ -117,9 +56,9 @@ class _SongsScreenState extends State<SongsScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.music_note_outlined,
-                            size: 48,
+                          AppIcon(
+                            icon: HugeIcons.strokeRoundedMusic02,
+                            size: 44,
                             color: theme.textTheme.bodySmall?.color,
                           ),
                           const SizedBox(height: 12),
@@ -153,102 +92,72 @@ class _SongsScreenState extends State<SongsScreen> {
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        // Chords Badge
-                                        if (song.hasChords) ...[
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 3,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.secondary
-                                                  .withValues(alpha: 0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                              border: Border.all(
-                                                color: theme
-                                                    .colorScheme
-                                                    .secondary
-                                                    .withValues(alpha: 0.25),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  Icons.music_note_rounded,
-                                                  size: 12,
-                                                  color: theme
-                                                      .colorScheme
-                                                      .secondary,
-                                                ),
-                                                const SizedBox(width: 2),
-                                                Text(
-                                                  'Chords',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: theme
-                                                        .colorScheme
-                                                        .secondary,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                  // Song Title & Note Icon (if hasChords)
+                                  Text.rich(
+                                    TextSpan(
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            fontSize: 15.5,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          const SizedBox(height: 6),
-                                        ],
-
-                                        // Song Title
-                                        Text(
-                                          song.title.isNotEmpty
+                                      children: [
+                                        TextSpan(
+                                          text: '| ',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: song.title.isNotEmpty
                                               ? song.title
                                               : 'Untitled Song',
-                                          style: theme.textTheme.titleMedium
-                                              ?.copyWith(
-                                                fontSize: 15.5,
-                                                fontWeight: FontWeight.bold,
-                                              ),
                                         ),
-                                        if (song.content.isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-
-                                          // Lyrics Content Snippet (1 Maxline)
-                                          Text(
-                                            song.content
-                                                .replaceAll(RegExp(r'\s+'), ' ')
-                                                .trim(),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: theme.textTheme.bodyMedium
-                                                ?.copyWith(
-                                                  fontSize: 13,
-                                                  color: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.color,
-                                                ),
+                                        if (song.hasChords)
+                                          WidgetSpan(
+                                            alignment:
+                                                PlaceholderAlignment.middle,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.only(
+                                                left: 6,
+                                              ),
+                                              child: AppIcon(
+                                                icon: HugeIcons
+                                                    .strokeRoundedMusicNote01,
+                                                size: 15,
+                                                color: theme.colorScheme
+                                                    .secondary,
+                                              ),
+                                            ),
                                           ),
-                                        ],
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  if (song.content.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
 
-                                  // Trailing Chevron Icon
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: theme.hintColor,
-                                    size: 22,
-                                  ),
+                                    // Lyrics Content Snippet (2 Maxlines)
+                                    Text(
+                                      song.content
+                                          .replaceAll(RegExp(r'\s+'), ' ')
+                                          .trim(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontSize: 13,
+                                            color: theme
+                                                .textTheme
+                                                .bodySmall
+                                                ?.color,
+                                          ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
@@ -266,7 +175,11 @@ class _SongsScreenState extends State<SongsScreen> {
             MaterialPageRoute(builder: (context) => const BookmarksScreen()),
           );
         },
-        icon: const Icon(Icons.bookmark_rounded),
+        icon: const AppIcon(
+          icon: HugeIcons.strokeRoundedBookmark02,
+          size: 20,
+          color: Colors.white,
+        ),
         label: const Text('Bookmarks'),
       ),
     );

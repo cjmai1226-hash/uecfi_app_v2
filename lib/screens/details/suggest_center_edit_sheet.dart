@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/center_model.dart';
 import '../../services/firestore_service.dart';
 import '../../services/user_service.dart';
@@ -24,7 +25,6 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
     'Location Locator',
     'Contact Person',
     'Facebook Page',
-    'Center History',
   ];
 
   // Location Locator Controllers
@@ -40,8 +40,6 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
   // Facebook Page Controller
   final TextEditingController _facebookPageController = TextEditingController();
 
-  // Center History Controller
-  final TextEditingController _historyTextController = TextEditingController();
 
   // Common Additional Notes Controller
   final TextEditingController _notesController = TextEditingController();
@@ -65,7 +63,6 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
     _contactRoleController.dispose();
     _contactNumberController.dispose();
     _facebookPageController.dispose();
-    _historyTextController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -84,8 +81,6 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
       payload['contactNumber'] = _contactNumberController.text.trim();
     } else if (_selectedType == 'Facebook Page') {
       payload['facebookPage'] = _facebookPageController.text.trim();
-    } else if (_selectedType == 'Center History') {
-      payload['historyText'] = _historyTextController.text.trim();
     }
     payload['notes'] = _notesController.text.trim();
 
@@ -267,35 +262,6 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
     );
   }
 
-  Widget _buildHistoryFields(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Suggested History Text',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: theme.textTheme.bodyLarge?.color,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: _historyTextController,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            hintText:
-                'Provide details about the founding, milestones, or history of this center...',
-          ),
-          validator: (val) {
-            if (val == null || val.trim().isEmpty) {
-              return 'Please enter history details';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -331,7 +297,7 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const AppIcon(icon: HugeIcons.strokeRoundedCancel01, size: 22),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -379,7 +345,6 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
               if (_selectedType == 'Contact Person') _buildContactFields(theme),
               if (_selectedType == 'Facebook Page')
                 _buildFacebookPageFields(theme),
-              if (_selectedType == 'Center History') _buildHistoryFields(theme),
 
               const SizedBox(height: 16),
 
@@ -408,7 +373,7 @@ class _SuggestCenterEditSheetState extends State<SuggestCenterEditSheet> {
                 height: 52,
                 child: FilledButton.icon(
                   onPressed: _submitSuggestion,
-                  icon: const Icon(Icons.send_rounded),
+                  icon: const AppIcon(icon: HugeIcons.strokeRoundedSent, size: 18),
                   label: const Text(
                     'Submit Suggestion',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

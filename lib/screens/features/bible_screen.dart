@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../models/bible_verse_model.dart';
 import '../../services/database_helper.dart';
 import '../../widgets/bible_selector_sheet.dart';
@@ -302,7 +303,12 @@ class _BibleScreenState extends State<BibleScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_isSearching ? Icons.close_rounded : Icons.search_rounded),
+            icon: AppIcon(
+              icon: _isSearching
+                  ? HugeIcons.strokeRoundedCancel01
+                  : HugeIcons.strokeRoundedSearch01,
+              size: 22,
+            ),
             tooltip: 'Search Scriptures',
             onPressed: () {
               setState(() {
@@ -317,7 +323,10 @@ class _BibleScreenState extends State<BibleScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.format_size_rounded),
+            icon: const AppIcon(
+              icon: HugeIcons.strokeRoundedText,
+              size: 22,
+            ),
             tooltip: 'Font Size',
             onPressed: _showFontSizeSlider,
           ),
@@ -328,35 +337,64 @@ class _BibleScreenState extends State<BibleScreen> {
         children: [
           // Search Input Bar
           if (_isSearching)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: theme.cardColor,
-                border: Border(bottom: BorderSide(color: theme.dividerColor)),
-              ),
-              child: TextField(
-                controller: _searchController,
-                autofocus: true,
-                onChanged: _performSearch,
-                decoration: InputDecoration(
-                  hintText: 'Search Ilocano Bible (e.g. ayat, namnama)...',
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            _performSearch('');
-                          },
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  filled: true,
-                  fillColor: isDark ? const Color(0xFF2A2B2E) : const Color(0xFFF0F2F5),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    borderSide: BorderSide.none,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Container(
+                height: 46,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E1E2A)
+                      : const Color(0xFFEEEEF4),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: theme.dividerColor.withValues(alpha: 0.6),
+                    width: 1,
                   ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  children: [
+                    AppIcon(
+                      icon: HugeIcons.strokeRoundedSearch01,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        onChanged: _performSearch,
+                        decoration: InputDecoration(
+                          hintText: 'Search Ilocano Bible (e.g. ayat, namnama)...',
+                          filled: false,
+                          hoverColor: Colors.transparent,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.textTheme.bodySmall?.color
+                                ?.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
+                    if (_searchController.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchController.clear();
+                          _performSearch('');
+                        },
+                        child: AppIcon(
+                          icon: HugeIcons.strokeRoundedCancel01,
+                          size: 18,
+                          color: theme.textTheme.bodySmall?.color,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -544,7 +582,7 @@ class _BibleScreenState extends State<BibleScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.chevron_left_rounded, size: 28),
+                      icon: const AppIcon(icon: HugeIcons.strokeRoundedArrowLeft01, size: 22),
                       tooltip: 'Previous Chapter',
                       onPressed: () => _navigateChapter(-1),
                     ),
@@ -574,9 +612,9 @@ class _BibleScreenState extends State<BibleScreen> {
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              Icon(
-                                Icons.unfold_more_rounded,
-                                size: 18,
+                              AppIcon(
+                                icon: HugeIcons.strokeRoundedSorting05,
+                                size: 16,
                                 color: theme.colorScheme.primary,
                               ),
                             ],
@@ -585,7 +623,7 @@ class _BibleScreenState extends State<BibleScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.chevron_right_rounded, size: 28),
+                      icon: const AppIcon(icon: HugeIcons.strokeRoundedArrowRight01, size: 22),
                       tooltip: 'Next Chapter',
                       onPressed: () => _navigateChapter(1),
                     ),

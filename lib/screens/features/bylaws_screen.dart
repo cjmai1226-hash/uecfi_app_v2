@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/database_helper.dart';
 import '../../models/bylaw_model.dart';
 import '../details/bylaw_detail_screen.dart';
@@ -52,9 +53,9 @@ class _BylawsScreenState extends State<BylawsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.description_outlined,
-                        size: 48,
+                      AppIcon(
+                        icon: HugeIcons.strokeRoundedLegalDocument01,
+                        size: 44,
                         color: theme.textTheme.bodySmall?.color,
                       ),
                       const SizedBox(height: 12),
@@ -86,79 +87,49 @@ class _BylawsScreenState extends State<BylawsScreen> {
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(16),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              // Bylaw Title
+                              Text.rich(
+                                TextSpan(
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontSize: 15.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                   children: [
-                                    // Chapter Badge
-                                    if (bylaw.chapters != null) ...[
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 9,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary
-                                              .withValues(alpha: 0.12),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: theme.colorScheme.primary
-                                                .withValues(alpha: 0.25),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          'Chapter ${bylaw.chapters}',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                    ],
-
-                                    // Bylaw Title
-                                    Text(
-                                      bylaw.title.isNotEmpty
-                                          ? bylaw.title
-                                          : 'Untitled Article',
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        fontSize: 15.5,
-                                        fontWeight: FontWeight.bold,
+                                    TextSpan(
+                                      text: '| ',
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.w900,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-
-                                    // Article Snippet (1 Maxline)
-                                    Text(
-                                      bylaw.content
-                                          .replaceAll(RegExp(r'\s+'), ' ')
-                                          .trim(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        fontSize: 13,
-                                        color: theme.textTheme.bodySmall?.color,
-                                      ),
+                                    TextSpan(
+                                      text: bylaw.title.isNotEmpty
+                                          ? bylaw.title
+                                          : 'Untitled Article',
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              if (bylaw.content.isNotEmpty) ...[
+                                const SizedBox(height: 4),
 
-                              // Trailing Chevron Icon
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                color: theme.hintColor,
-                                size: 22,
-                              ),
+                                // Article Snippet (2 Maxlines)
+                                Text(
+                                  bylaw.content
+                                      .replaceAll(RegExp(r'\s+'), ' ')
+                                      .trim(),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style:
+                                      theme.textTheme.bodyMedium?.copyWith(
+                                    fontSize: 13,
+                                    color: theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import '../../services/database_helper.dart';
 import '../../services/user_service.dart';
 import '../../models/center_model.dart';
@@ -482,10 +483,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                _hasAcceptedTerms
-                                    ? Icons.check_circle_rounded
-                                    : Icons.arrow_downward_rounded,
+                              AppIcon(
+                                icon: _hasAcceptedTerms
+                                    ? HugeIcons.strokeRoundedCheckmarkCircle01
+                                    : HugeIcons.strokeRoundedArrowDown01,
                                 size: 16,
                                 color: _hasAcceptedTerms
                                     ? theme.colorScheme.primary
@@ -523,8 +524,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             firstChild: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.swipe_down_rounded,
+                AppIcon(
+                  icon: HugeIcons.strokeRoundedArrowDown01,
                   size: 14,
                   color: theme.textTheme.bodySmall?.color,
                 ),
@@ -541,8 +542,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             secondChild: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.check_circle_outline_rounded,
+                AppIcon(
+                  icon: HugeIcons.strokeRoundedCheckmarkCircle01,
                   size: 14,
                   color: theme.colorScheme.primary,
                 ),
@@ -1097,7 +1098,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   if (_currentPage > 0)
                     IconButton(
-                      icon: const Icon(Icons.arrow_back_rounded),
+                      icon: const AppIcon(
+                        icon: HugeIcons.strokeRoundedArrowLeft01,
+                        size: 20,
+                      ),
                       onPressed: () {
                         _pageController.previousPage(
                           duration: const Duration(milliseconds: 300),

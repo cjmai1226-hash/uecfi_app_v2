@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/blog_post.dart';
-import '../models/post_gradient.dart';
 import '../models/user_profile.dart';
 import '../services/firestore_service.dart';
 import '../services/user_service.dart';
@@ -10,7 +10,6 @@ import '../screens/features/profile_screen.dart';
 import '../screens/forms/create_post_screen.dart';
 import 'user_avatar.dart';
 import 'expandable_text.dart';
-import 'contributor_badge.dart';
 
 class CommunityPostCard extends StatefulWidget {
   final BlogPost post;
@@ -122,7 +121,10 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
               ),
               if (isAuthor)
                 ListTile(
-                  leading: const Icon(Icons.edit_outlined),
+                  leading: const AppIcon(
+                    icon: HugeIcons.strokeRoundedEdit02,
+                    size: 20,
+                  ),
                   title: const Text(
                     'Edit Post',
                     style: TextStyle(fontWeight: FontWeight.bold),
@@ -139,9 +141,10 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                   },
                 ),
               ListTile(
-                leading: const Icon(
-                  Icons.flag_outlined,
+                leading: const AppIcon(
+                  icon: HugeIcons.strokeRoundedFlag01,
                   color: Colors.redAccent,
+                  size: 20,
                 ),
                 title: const Text(
                   'Report Post',
@@ -378,35 +381,15 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                                                         .toLowerCase() ==
                                                     'devchristian') ...[
                                                   const SizedBox(width: 4),
-                                                  Icon(
-                                                    Icons.verified_rounded,
+                                                  AppIcon(
+                                                    icon: HugeIcons
+                                                        .strokeRoundedCheckmarkBadge01,
                                                     color: theme
                                                         .colorScheme
                                                         .primary,
                                                     size: 13,
                                                   ),
                                                 ],
-                                                const SizedBox(width: 4),
-                                                FutureBuilder<int>(
-                                                  future:
-                                                      UserContributionsCache.load(
-                                                        comment.author,
-                                                      ),
-                                                  initialData:
-                                                      UserContributionsCache.get(
-                                                        comment.author,
-                                                      ) ??
-                                                      0,
-                                                  builder: (context, snapshot) {
-                                                    final count =
-                                                        snapshot.data ?? 0;
-                                                    return getContributorBadge(
-                                                      count,
-                                                      theme,
-                                                      size: 13,
-                                                    );
-                                                  },
-                                                ),
                                               ],
                                             ),
                                           ),
@@ -460,9 +443,10 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                           ),
                           const SizedBox(width: 8),
                           IconButton(
-                            icon: Icon(
-                              Icons.send_rounded,
+                            icon: AppIcon(
+                              icon: HugeIcons.strokeRoundedSent,
                               color: theme.colorScheme.primary,
+                              size: 20,
                             ),
                             onPressed: () async {
                               final text = _commentInputController.text.trim();
@@ -513,10 +497,6 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
       builder: (context, profile, child) {
         final isAuthor =
             _post.author.toLowerCase() == profile.nickname.toLowerCase();
-        final postGradient = PostGradientPreset.findById(_post.bgGradient);
-        final isLong =
-            _post.content.characters.length > 180 ||
-            _post.content.split('\n').length > 4;
 
         return Container(
           width: double.infinity,
@@ -586,22 +566,12 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                       ),
                       if (_post.author.toLowerCase() == 'devchristian') ...[
                         const SizedBox(width: 4),
-                        Icon(
-                          Icons.verified_rounded,
+                        AppIcon(
+                          icon: HugeIcons.strokeRoundedCheckmarkBadge01,
                           color: theme.colorScheme.primary,
                           size: 16,
                         ),
                       ],
-                      const SizedBox(width: 4),
-                      FutureBuilder<int>(
-                        future: UserContributionsCache.load(_post.author),
-                        initialData:
-                            UserContributionsCache.get(_post.author) ?? 0,
-                        builder: (context, snapshot) {
-                          final count = snapshot.data ?? 0;
-                          return getContributorBadge(count, theme, size: 16);
-                        },
-                      ),
                     ],
                   ),
                 ),
@@ -618,76 +588,39 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                       style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
                     ),
                     const SizedBox(width: 4),
-                    Icon(
-                      _post.isExpired
-                          ? Icons.lock_outline_rounded
-                          : Icons.public_rounded,
+                    AppIcon(
+                      icon: _post.isExpired
+                          ? HugeIcons.strokeRoundedLockKeyhole
+                          : HugeIcons.strokeRoundedGlobal,
                       size: 12,
                       color: theme.textTheme.bodySmall?.color,
                     ),
                   ],
                 ),
                 trailing: IconButton(
-                  icon: const Icon(Icons.more_horiz_rounded),
+                  icon: const AppIcon(
+                    icon: HugeIcons.strokeRoundedMoreHorizontal,
+                    size: 20,
+                  ),
                   onPressed: () => _showPostOptions(context),
                 ),
               ),
 
               // Post Body Content
-              if (postGradient != null && !isLong)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(minHeight: 180),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 32,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: postGradient.gradient,
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        _post.content,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          height: 1.4,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black38,
-                              blurRadius: 4,
-                              offset: Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  child: ExpandableText(
-                    text: _post.content,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontSize: 14.5,
-                      height: 1.45,
-                      color: theme.textTheme.bodyLarge?.color,
-                    ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                child: ExpandableText(
+                  text: _post.content,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontSize: 14.5,
+                    height: 1.45,
+                    color: theme.textTheme.bodyLarge?.color,
                   ),
                 ),
+              ),
 
               const SizedBox(height: 10),
 
@@ -732,10 +665,8 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              _post.isLiked
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
+                            AppIcon(
+                              icon: HugeIcons.strokeRoundedFavourite,
                               size: 18,
                               color: _post.isLiked
                                   ? theme.colorScheme.primary
@@ -774,8 +705,8 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.chat_bubble_outline_rounded,
+                            AppIcon(
+                              icon: HugeIcons.strokeRoundedComment01,
                               size: 17,
                               color: theme.textTheme.bodySmall?.color,
                             ),

@@ -48,22 +48,22 @@ class DevCoinsService {
   static const List<DevCoinsTier> tiers = [
     DevCoinsTier(
       coins: 150,
-      pesos: 20,
-      title: '₱20 E-Credit',
+      pesos: 30,
+      title: '₱30 E-Credit',
       description: 'Instant online bank or e-wallet transfer',
       isOneTime: false,
     ),
     DevCoinsTier(
       coins: 350,
-      pesos: 50,
-      title: '₱50 E-Credit',
+      pesos: 60,
+      title: '₱60 E-Credit',
       description: 'Direct online bank or e-wallet transfer',
       isOneTime: false,
     ),
     DevCoinsTier(
       coins: 950,
-      pesos: 150,
-      title: '₱150 E-Credit',
+      pesos: 200,
+      title: '₱200 E-Credit',
       description: 'Special one-time bonus reward for dedicated contributors',
       isOneTime: true,
     ),

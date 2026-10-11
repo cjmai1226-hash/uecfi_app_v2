@@ -1,5 +1,6 @@
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 
@@ -337,39 +338,42 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     if (!AdService().isSupportedPlatform || !_isAdLoaded || _isClosed) {
       return const SizedBox.shrink();
     }
-    return SizedBox(
-      height: widget.height,
-      child: Center(
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              alignment: Alignment.center,
-              width: _bannerAd.size.width.toDouble(),
-              height: _bannerAd.size.height.toDouble(),
-              child: AdWidget(ad: _bannerAd),
-            ),
-            Positioned(
-              right: -8,
-              top: -8,
-              child: GestureDetector(
-                onTap: () => setState(() => _isClosed = true),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    size: 12,
-                    color: Colors.white,
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: widget.height,
+        child: Center(
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                alignment: Alignment.center,
+                width: _bannerAd.size.width.toDouble(),
+                height: _bannerAd.size.height.toDouble(),
+                child: AdWidget(ad: _bannerAd),
+              ),
+              Positioned(
+                right: -8,
+                top: -8,
+                child: GestureDetector(
+                  onTap: () => setState(() => _isClosed = true),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const AppIcon(
+                      icon: HugeIcons.strokeRoundedCancel01,
+                      size: 12,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

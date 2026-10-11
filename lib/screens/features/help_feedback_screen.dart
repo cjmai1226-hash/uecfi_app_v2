@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 import '../../services/user_service.dart';
@@ -151,7 +152,7 @@ class _HelpFeedbackScreenState extends State<HelpFeedbackScreen> with SingleTick
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline_rounded, color: theme.colorScheme.primary, size: 24),
+                  AppIcon(icon: HugeIcons.strokeRoundedInformationCircle, color: theme.colorScheme.primary, size: 24),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
@@ -259,7 +260,7 @@ class _HelpFeedbackScreenState extends State<HelpFeedbackScreen> with SingleTick
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.send_rounded),
+                    : const AppIcon(icon: HugeIcons.strokeRoundedSent, size: 18, color: Colors.white),
                 label: Text(
                   _isSubmitting ? 'Submitting...' : 'Submit Request',
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -289,8 +290,8 @@ class _HelpFeedbackScreenState extends State<HelpFeedbackScreen> with SingleTick
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.mark_email_read_outlined,
+              AppIcon(
+                icon: HugeIcons.strokeRoundedMail01,
                 size: 64,
                 color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.4),
               ),
@@ -420,7 +421,7 @@ class _HelpFeedbackScreenState extends State<HelpFeedbackScreen> with SingleTick
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.admin_panel_settings_rounded, color: theme.colorScheme.primary, size: 18),
+                            AppIcon(icon: HugeIcons.strokeRoundedUserShield01, color: theme.colorScheme.primary, size: 18),
                             const SizedBox(width: 8),
                             const Text(
                               'Support Team Response',
@@ -461,8 +462,8 @@ class _HelpFeedbackScreenState extends State<HelpFeedbackScreen> with SingleTick
           controller: _tabController,
           indicatorSize: TabBarIndicatorSize.tab,
           tabs: const [
-            Tab(icon: Icon(Icons.rate_review_rounded), text: 'Submit Request'),
-            Tab(icon: Icon(Icons.receipt_long_rounded), text: 'My Helpline Tickets'),
+            Tab(icon: AppIcon(icon: HugeIcons.strokeRoundedEdit02, size: 20), text: 'Submit Request'),
+            Tab(icon: AppIcon(icon: HugeIcons.strokeRoundedInvoice01, size: 20), text: 'My Helpline Tickets'),
           ],
         ),
       ),

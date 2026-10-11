@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/center_model.dart';
 import '../../models/user_profile.dart';
@@ -7,7 +8,6 @@ import '../../services/user_service.dart';
 import '../features/profile_screen.dart';
 import '../features/public_profile_screen.dart';
 import 'suggest_center_edit_sheet.dart';
-import 'center_people_screen.dart';
 import '../../widgets/user_avatar.dart';
 
 class CenterDetailScreen extends StatelessWidget {
@@ -237,7 +237,7 @@ class CenterDetailScreen extends StatelessWidget {
 
   Widget _buildActionButton({
     required ThemeData theme,
-    required IconData icon,
+    required List<List<dynamic>> icon,
     required String label,
     required VoidCallback onTap,
     bool isDark = false,
@@ -254,7 +254,7 @@ class CenterDetailScreen extends StatelessWidget {
       height: 52,
       child: ElevatedButton.icon(
         onPressed: onTap,
-        icon: Icon(icon, size: 18, color: effectiveFgColor),
+        icon: AppIcon(icon: icon, size: 18, color: effectiveFgColor),
         label: Text(label),
         style: ElevatedButton.styleFrom(
           backgroundColor: effectiveBgColor,
@@ -337,7 +337,7 @@ class CenterDetailScreen extends StatelessWidget {
 
               if (isHomeCenter) {
                 return IconButton(
-                  icon: const Icon(Icons.home_rounded),
+                  icon: const AppIcon(icon: HugeIcons.strokeRoundedHome01, size: 22),
                   tooltip: 'Home Center',
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -352,102 +352,11 @@ class CenterDetailScreen extends StatelessWidget {
                 );
               }
 
-              return StreamBuilder<List<Map<String, dynamic>>>(
-                stream: FirestoreService().streamCenterVisitors(center.name),
-                builder: (context, snapshot) {
-                  final List<Map<String, dynamic>> visitors =
-                      snapshot.data ?? [];
-                  final bool hasVisited = visitors.any(
-                    (v) =>
-                        (v['userEmail'] as String? ?? '')
-                            .toLowerCase() ==
-                        currentUser.email.trim().toLowerCase(),
-                  );
-
-                  return IconButton(
-                    icon: Icon(
-                      hasVisited
-                          ? Icons.place_rounded
-                          : Icons.place_outlined,
-                      color: hasVisited
-                          ? theme.colorScheme.primary
-                          : null,
-                    ),
-                    tooltip: hasVisited
-                        ? "Visited (Tap to remove)"
-                        : "I've Been Here (Tap to check in)",
-                    onPressed: () async {
-                      if (currentUser.email.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Please log in to check in as a visitor.',
-                            ),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (hasVisited) {
-                        final bool? confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (dCtx) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            title: const Text('Remove Visit?'),
-                            content: Text(
-                              'Remove your visit check-in for ${center.name}?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(dCtx, false),
-                                child: const Text('Cancel'),
-                              ),
-                              FilledButton(
-                                onPressed: () =>
-                                    Navigator.pop(dCtx, true),
-                                child: const Text('Remove'),
-                              ),
-                            ],
-                          ),
-                        );
-                        if (confirm == true) {
-                          await FirestoreService().toggleCenterVisit(
-                            centerName: center.name,
-                            centerAddress: center.address,
-                            profile: currentUser,
-                            isVisiting: false,
-                          );
-                        }
-                      } else {
-                        await FirestoreService().toggleCenterVisit(
-                          centerName: center.name,
-                          centerAddress: center.address,
-                          profile: currentUser,
-                          isVisiting: true,
-                        );
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Marked as visited! Thank you for visiting ${center.name}.',
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  );
-                },
-              );
+              return const SizedBox.shrink();
             },
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            icon: const AppIcon(icon: HugeIcons.strokeRoundedEdit02, size: 22),
             tooltip: 'Suggest Edit',
             onPressed: () => _openSuggestEditModal(context),
           ),
@@ -461,9 +370,9 @@ class CenterDetailScreen extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                // Cover banner placeholder (Facebook Blue header card)
+                // Cover Banner with Gradient & Dynamic Accent Hue
                 Container(
-                  height: 300,
+                  height: 170,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -550,7 +459,7 @@ class CenterDetailScreen extends StatelessWidget {
                     ),
                   ),
 
-                  // Header Subtitle: (count) Members • (count) Visitors • Status (Profile badge style)
+                  // Header Subtitle: (count) Members • Status (Profile badge style)
                   FutureBuilder<List<Map<String, dynamic>>>(
                     future: FirestoreService().getCenterMembers(
                       center.name,
@@ -564,133 +473,56 @@ class CenterDetailScreen extends StatelessWidget {
                           ? _capitalize(center.status)
                           : (isActive ? 'Active' : 'Inactive');
 
-                      return StreamBuilder<List<Map<String, dynamic>>>(
-                        stream: FirestoreService().streamCenterVisitors(
-                          center.name,
-                        ),
-                        builder: (context, visitorSnapshot) {
-                          final visitorCount =
-                              visitorSnapshot.data?.length ?? 0;
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.only(top: 6.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(6),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => CenterPeopleScreen(
-                                            center: center,
-                                            initialTabIndex: 0,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 2,
-                                      ),
-                                      child: Text.rich(
-                                        TextSpan(
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: theme.textTheme.bodySmall?.color,
-                                            fontWeight: FontWeight.normal,
-                                            fontSize: 13,
-                                          ),
-                                          children: [
-                                            TextSpan(
-                                              text: '$memberCount',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: theme.textTheme.bodyLarge?.color,
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text: memberCount == 1 ? ' member' : ' members',
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 6.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text.rich(
+                                TextSpan(
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.textTheme.bodySmall?.color,
+                                    fontWeight: FontWeight.normal,
+                                    fontSize: 13,
                                   ),
-                                  Text(
-                                    ' • ',
-                                    style: TextStyle(
-                                      color: theme.textTheme.bodySmall?.color,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  InkWell(
-                                    borderRadius: BorderRadius.circular(6),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => CenterPeopleScreen(
-                                            center: center,
-                                            initialTabIndex: 1,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 2,
-                                      ),
-                                      child: Text.rich(
-                                        TextSpan(
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: theme.textTheme.bodySmall?.color,
-                                            fontWeight: FontWeight.normal,
-                                            fontSize: 13,
-                                          ),
-                                          children: [
-                                            TextSpan(
-                                              text: '$visitorCount',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                color: theme.textTheme.bodyLarge?.color,
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text: visitorCount == 1 ? ' visitor' : ' visitors',
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  if (center.status.trim().isNotEmpty) ...[
-                                    Text(
-                                      ' • ',
+                                  children: [
+                                    TextSpan(
+                                      text: '$memberCount',
                                       style: TextStyle(
-                                        color: theme.textTheme.bodySmall?.color,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    Text(
-                                      statusLabel,
-                                      style: TextStyle(
-                                        fontSize: 13,
                                         fontWeight: FontWeight.bold,
-                                        color: isActive
-                                            ? Colors.green
-                                            : Colors.redAccent,
+                                        color: theme.textTheme.bodyLarge?.color,
                                       ),
+                                    ),
+                                    TextSpan(
+                                      text: memberCount == 1 ? ' member' : ' members',
                                     ),
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                              if (center.status.trim().isNotEmpty) ...[
+                                Text(
+                                  ' • ',
+                                  style: TextStyle(
+                                    color: theme.textTheme.bodySmall?.color,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: isActive
+                                        ? Colors.green
+                                        : Colors.redAccent,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -705,7 +537,7 @@ class CenterDetailScreen extends StatelessWidget {
                           theme: theme,
                           isDark: isDark,
                           isDisabled: phoneNumber == null,
-                          icon: Icons.phone_rounded,
+                          icon: HugeIcons.strokeRoundedCall,
                           label: 'Call',
                           onTap: () => _handleCallAction(context, phoneNumber),
                         ),
@@ -717,7 +549,7 @@ class CenterDetailScreen extends StatelessWidget {
                         child: _buildActionButton(
                           theme: theme,
                           isDark: isDark,
-                          icon: Icons.directions_rounded,
+                          icon: HugeIcons.strokeRoundedCompass,
                           label: 'Directions',
                           onTap: () {
                             if (center.location.isNotEmpty ||
@@ -742,7 +574,7 @@ class CenterDetailScreen extends StatelessWidget {
                     child: _buildActionButton(
                       theme: theme,
                       isDark: isDark,
-                      icon: Icons.facebook,
+                      icon: HugeIcons.strokeRoundedFacebook02,
                       label: 'Visit',
                       onTap: () {
                         if (center.page.isNotEmpty) {
@@ -760,130 +592,176 @@ class CenterDetailScreen extends StatelessWidget {
                   Divider(color: theme.dividerColor, height: 1),
                   const SizedBox(height: 20),
 
-                  // Intro Details section
+                  // Center Details section
                   Text(
-                    'INTRO',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11.5,
-                      letterSpacing: 0.8,
-                      color: theme.textTheme.bodySmall?.color,
+                    'Center Details',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  if ([
-                    if (center.district.isNotEmpty) center.district,
-                    if (center.area.isNotEmpty)
-                      center.area.startsWith('Area')
-                          ? center.area
-                          : 'Area ${center.area}',
-                  ].join(' • ').isNotEmpty)
-                    ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                      title: Text(
-                        [
+                  const SizedBox(height: 12),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if ([
                           if (center.district.isNotEmpty) center.district,
                           if (center.area.isNotEmpty)
                             center.area.startsWith('Area')
                                 ? center.area
                                 : 'Area ${center.area}',
-                        ].join(' • '),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'District & Area',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: theme.textTheme.bodySmall?.color,
-                        ),
-                      ),
-                    ),
-                  ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    title: Text(
-                      center.address.isNotEmpty
-                          ? center.address
-                          : 'No address shared for this center yet.',
-                      style: TextStyle(
-                        fontWeight: center.address.isNotEmpty
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        fontSize: 14,
-                      ),
-                    ),
-                    subtitle: center.address.isNotEmpty
-                        ? Text(
+                        ].join(' • ').isNotEmpty) ...[
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            title: Text(
+                              'District & Area',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                [
+                                  if (center.district.isNotEmpty) center.district,
+                                  if (center.area.isNotEmpty)
+                                    center.area.startsWith('Area')
+                                        ? center.area
+                                        : 'Area ${center.area}',
+                                ].join(' • '),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: theme.textTheme.bodyLarge?.color,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Divider(color: theme.dividerColor, height: 1),
+                        ],
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          title: Text(
                             'Address / Location',
                             style: TextStyle(
                               fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               color: theme.textTheme.bodySmall?.color,
                             ),
-                          )
-                        : null,
-                  ),
-                  ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    title: Text(
-                      center.contact.isNotEmpty
-                          ? center.contact
-                          : 'No contact shared for this center yet.',
-                      style: TextStyle(
-                        fontWeight: center.contact.isNotEmpty
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        fontSize: 14,
-                      ),
-                    ),
-                    subtitle: center.contact.isNotEmpty
-                        ? Text(
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              center.address.isNotEmpty
+                                  ? center.address
+                                  : 'No address shared for this center yet.',
+                              style: TextStyle(
+                                fontWeight: center.address.isNotEmpty
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontStyle: center.address.isNotEmpty
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                                fontSize: 14,
+                                color: center.address.isNotEmpty
+                                    ? theme.textTheme.bodyLarge?.color
+                                    : theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Divider(color: theme.dividerColor, height: 1),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          title: Text(
                             'Contact Person',
                             style: TextStyle(
                               fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               color: theme.textTheme.bodySmall?.color,
                             ),
-                          )
-                        : null,
-                  ),
-                  ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    title: Text(
-                      center.page.isNotEmpty
-                          ? 'Official Facebook Page'
-                          : 'No Facebook page shared for this center yet.',
-                      style: TextStyle(
-                        fontWeight: center.page.isNotEmpty
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        fontSize: 14,
-                      ),
-                    ),
-                    subtitle: center.page.isNotEmpty
-                        ? Text(
-                            center.page,
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              center.contact.isNotEmpty
+                                  ? center.contact
+                                  : 'No contact shared for this center yet.',
+                              style: TextStyle(
+                                fontWeight: center.contact.isNotEmpty
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontStyle: center.contact.isNotEmpty
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                                fontSize: 14,
+                                color: center.contact.isNotEmpty
+                                    ? theme.textTheme.bodyLarge?.color
+                                    : theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Divider(color: theme.dividerColor, height: 1),
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          title: Text(
+                            'Official Facebook Page',
                             style: TextStyle(
                               fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               color: theme.textTheme.bodySmall?.color,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : null,
-                    trailing: center.page.isNotEmpty
-                        ? const Icon(
-                            Icons.open_in_new_rounded,
-                            size: 18,
-                          )
-                        : null,
-                    onTap: center.page.isNotEmpty
-                        ? () => _openExternalUrl(context, center.page)
-                        : null,
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              center.page.isNotEmpty
+                                  ? center.page
+                                  : 'No Facebook page shared for this center yet.',
+                              style: TextStyle(
+                                fontWeight: center.page.isNotEmpty
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontStyle: center.page.isNotEmpty
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                                fontSize: 14,
+                                color: center.page.isNotEmpty
+                                    ? theme.textTheme.bodyLarge?.color
+                                    : theme.textTheme.bodySmall?.color,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          trailing: center.page.isNotEmpty
+                              ? const AppIcon(
+                                  icon: HugeIcons.strokeRoundedArrowUpRight01,
+                                  size: 18,
+                                )
+                              : null,
+                          onTap: center.page.isNotEmpty
+                              ? () => _openExternalUrl(context, center.page)
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
                     const SizedBox(height: 24),
                     Divider(color: theme.dividerColor, height: 1),
@@ -905,7 +783,6 @@ class CenterDetailScreen extends StatelessWidget {
 
                         final List<Map<String, dynamic>> members =
                             snapshot.data ?? [];
-                        final displayMembers = members.take(4).toList();
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -940,183 +817,150 @@ class CenterDetailScreen extends StatelessWidget {
                                     ),
                                   ),
                                 ],
-                                const Spacer(),
-                                InkWell(
-                                  borderRadius: BorderRadius.circular(8),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => CenterPeopleScreen(
-                                          center: center,
-                                          initialTabIndex: 0,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 4,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          'View All',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Icon(
-                                          Icons.chevron_right_rounded,
-                                          size: 18,
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
                             if (members.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Text(
-                                  'No registered members at this center yet.',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontStyle: FontStyle.italic,
-                                    color: theme.textTheme.bodySmall?.color,
+                              Card(
+                                margin: EdgeInsets.zero,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Center(
+                                    child: Text(
+                                      'No registered members at this center yet.',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                        color: theme.textTheme.bodySmall?.color,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               )
                             else
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  for (int i = 0; i < 4; i++)
-                                    if (i < displayMembers.length)
-                                      Expanded(
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(12),
-                                          onTap: () {
-                                            final member = displayMembers[i];
-                                            final nickname = member['name'] ?? '';
-                                            _openMemberProfile(
-                                              context,
-                                              email: member['email'] ?? '',
-                                              nickname: nickname,
-                                              avatarUrl: member['avatarUrl']
-                                                  as String?,
-                                              localCenter: center.name,
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 6,
-                                              horizontal: 2,
-                                            ),
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                UserAvatar(
-                                                  authorName: displayMembers[i]
-                                                          ['name'] ??
-                                                      'Member',
-                                                  avatarUrl: displayMembers[i]
-                                                          ['avatarUrl']
-                                                      as String?,
-                                                  radius: 24,
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Text(
-                                                  _capitalize(
-                                                    displayMembers[i]['name'] ??
-                                                        'Member',
-                                                  ),
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: theme
-                                                        .textTheme
-                                                        .bodyLarge
-                                                        ?.color,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  _capitalize(
-                                                    ((displayMembers[i]['position']
-                                                                    as String?) ??
-                                                                '')
-                                                            .trim()
-                                                            .isEmpty
-                                                        ? 'Member'
-                                                        : ((displayMembers[i]
-                                                                        ['position']
-                                                                    as String?) ??
-                                                                '')
-                                                            .trim(),
-                                                  ),
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: theme
-                                                        .textTheme
-                                                        .bodySmall
-                                                        ?.color,
-                                                  ),
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ],
+                              Card(
+                                margin: EdgeInsets.zero,
+                                clipBehavior: Clip.antiAlias,
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  itemCount: members.length,
+                                  separatorBuilder: (context, index) =>
+                                      Divider(color: theme.dividerColor, height: 1),
+                                  itemBuilder: (context, index) {
+                                    final member = members[index];
+                                    final String firstName =
+                                        (member['firstName'] as String? ?? '').trim();
+                                    final String middleName =
+                                        (member['middleName'] as String? ?? '').trim();
+                                    final String lastName =
+                                        (member['lastName'] as String? ??
+                                                member['surname'] as String? ??
+                                                '')
+                                            .trim();
+
+                                    final List<String> fullNameParts = [];
+                                    if (firstName.isNotEmpty) {
+                                      fullNameParts.add(_capitalize(firstName));
+                                    }
+                                    if (middleName.isNotEmpty) {
+                                      final cleanMiddle =
+                                          middleName.replaceAll('.', '').trim();
+                                      if (cleanMiddle.isNotEmpty) {
+                                        fullNameParts.add(
+                                            '${cleanMiddle[0].toUpperCase()}.');
+                                      }
+                                    }
+                                    if (lastName.isNotEmpty) {
+                                      fullNameParts.add(_capitalize(lastName));
+                                    }
+
+                                    final String fullName =
+                                        fullNameParts.join(' ').trim();
+                                    final String nickname =
+                                        (member['name'] as String? ??
+                                                member['nickname'] as String? ??
+                                                '')
+                                            .trim();
+
+                                    final String displayName = fullName.isNotEmpty
+                                        ? fullName
+                                        : (nickname.isNotEmpty
+                                            ? _capitalize(nickname)
+                                            : 'Member');
+
+                                    final String rawPosition =
+                                        member['position'] ?? '';
+                                    final String positionVal =
+                                        rawPosition.trim().isEmpty
+                                            ? 'Member'
+                                            : rawPosition.trim();
+                                    final String position =
+                                        _capitalize(positionVal);
+                                    final bool isDevChristian =
+                                        nickname.toLowerCase() == 'devchristian' ||
+                                            displayName.toLowerCase().contains('devchristian');
+
+                                    return ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 4,
+                                      ),
+                                      leading: UserAvatar(
+                                        authorName: displayName,
+                                        avatarUrl: member['avatarUrl'] as String?,
+                                        radius: 20,
+                                      ),
+                                      title: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              displayName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14.5,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
+                                          if (isDevChristian) ...[
+                                            const SizedBox(width: 4),
+                                            AppIcon(
+                                              icon: HugeIcons.strokeRoundedCheckmarkBadge01,
+                                              color: theme.colorScheme.primary,
+                                              size: 15,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      subtitle: Text(
+                                        position,
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          fontSize: 12,
                                         ),
-                                      )
-                                    else if (displayMembers.length < 4)
-                                      const Spacer(),
-                                ],
+                                      ),
+                                      trailing: const AppIcon(
+                                        icon: HugeIcons.strokeRoundedArrowRight01,
+                                        size: 20,
+                                      ),
+                                      onTap: () => _openMemberProfile(
+                                        context,
+                                        email: member['email'] ?? '',
+                                        nickname: nickname.isNotEmpty ? nickname : displayName,
+                                        avatarUrl:
+                                            member['avatarUrl'] as String?,
+                                        localCenter: center.name,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                           ],
                         );
                       },
                     ),
-                    const SizedBox(height: 24),
-                    Divider(color: theme.dividerColor, height: 1),
-                    const SizedBox(height: 20),
-
-                    // Center History Section
-                    Text(
-                      'Center History',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (center.history.isNotEmpty)
-                      Text(
-                        center.history,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          height: 1.6,
-                          color: theme.textTheme.bodyLarge?.color,
-                        ),
-                      )
-                    else
-                      Text(
-                        'No history shared for this center yet.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: theme.textTheme.bodySmall?.color,
-                        ),
-                      ),
                     const SizedBox(height: 80),
                 ],
               ),

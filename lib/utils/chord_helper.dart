@@ -1,46 +1,115 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_icon.dart';
 
 class ChordHelper {
   // Dictionary of basic guitar chords (from uecfi_flutter_app_vanilla)
   static const Map<String, String> _guitarChords = {
-    'C': 'x32010', 'C#': 'x46664', 'Db': 'x46664',
-    'D': 'xx0232', 'D#': 'xx1343', 'Eb': 'xx1343',
+    'C': 'x32010',
+    'C#': 'x46664',
+    'Db': 'x46664',
+    'D': 'xx0232',
+    'D#': 'xx1343',
+    'Eb': 'xx1343',
     'E': '022100',
-    'F': '133211', 'F#': '244322', 'Gb': '244322',
-    'G': '320003', 'G#': '466544', 'Ab': '466544',
-    'A': 'x02220', 'A#': 'x13331', 'Bb': 'x13331',
+    'F': '133211',
+    'F#': '244322',
+    'Gb': '244322',
+    'G': '320003',
+    'G#': '466544',
+    'Ab': '466544',
+    'A': 'x02220',
+    'A#': 'x13331',
+    'Bb': 'x13331',
     'B': 'x24442',
-    'Cm': 'x35543', 'C#m': 'x46654', 'Dbm': 'x46654',
-    'Dm': 'xx0231', 'D#m': 'xx1342', 'Ebm': 'xx1342',
+    'Cm': 'x35543',
+    'C#m': 'x46654',
+    'Dbm': 'x46654',
+    'Dm': 'xx0231',
+    'D#m': 'xx1342',
+    'Ebm': 'xx1342',
     'Em': '022000',
-    'Fm': '133111', 'F#m': '244222', 'Gbm': '244222',
-    'Gm': '355333', 'G#m': '466444', 'Abm': '466444',
-    'Am': 'x02210', 'A#m': 'x13321', 'Bbm': 'x13321',
+    'Fm': '133111',
+    'F#m': '244222',
+    'Gbm': '244222',
+    'Gm': '355333',
+    'G#m': '466444',
+    'Abm': '466444',
+    'Am': 'x02210',
+    'A#m': 'x13321',
+    'Bbm': 'x13321',
     'Bm': 'x24432',
-    'C7': 'x32310', 'D7': 'xx0212', 'E7': '020100', 'F7': '131211', 'G7': '320001', 'A7': 'x02020', 'B7': 'x21202',
-    'Cmaj7': 'x32000', 'Gmaj7': '3x0002', 'Amaj7': 'x02120', 'Dmaj7': 'xx0222', 'Emaj7': '021100', 'Fmaj7': '1x2210',
-    'Csus2': 'x30033', 'Dsus2': 'xx0230', 'Asus2': 'x02200', 'Esus2': '024400',
-    'Csus4': 'x33010', 'Dsus4': 'xx0233', 'Asus4': 'x02230', 'Esus4': '022200',
+    'C7': 'x32310',
+    'D7': 'xx0212',
+    'E7': '020100',
+    'F7': '131211',
+    'G7': '320001',
+    'A7': 'x02020',
+    'B7': 'x21202',
+    'Cmaj7': 'x32000',
+    'Gmaj7': '3x0002',
+    'Amaj7': 'x02120',
+    'Dmaj7': 'xx0222',
+    'Emaj7': '021100',
+    'Fmaj7': '1x2210',
+    'Csus2': 'x30033',
+    'Dsus2': 'xx0230',
+    'Asus2': 'x02200',
+    'Esus2': '024400',
+    'Csus4': 'x33010',
+    'Dsus4': 'xx0233',
+    'Asus4': 'x02230',
+    'Esus4': '022200',
   };
 
   // Dictionary of basic ukulele chords
   static const Map<String, String> _ukuleleChords = {
-    'C': '0003', 'C#': '1114', 'Db': '1114',
-    'D': '2220', 'D#': '0331', 'Eb': '0331',
+    'C': '0003',
+    'C#': '1114',
+    'Db': '1114',
+    'D': '2220',
+    'D#': '0331',
+    'Eb': '0331',
     'E': '1402',
-    'F': '2010', 'F#': '3121', 'Gb': '3121',
-    'G': '0232', 'G#': '5343', 'Ab': '5343',
-    'A': '2100', 'A#': '3211', 'Bb': '3211',
+    'F': '2010',
+    'F#': '3121',
+    'Gb': '3121',
+    'G': '0232',
+    'G#': '5343',
+    'Ab': '5343',
+    'A': '2100',
+    'A#': '3211',
+    'Bb': '3211',
     'B': '4322',
-    'Cm': '0333', 'C#m': '1444', 'Dbm': '1444',
-    'Dm': '2210', 'D#m': '3321', 'Ebm': '3321',
+    'Cm': '0333',
+    'C#m': '1444',
+    'Dbm': '1444',
+    'Dm': '2210',
+    'D#m': '3321',
+    'Ebm': '3321',
     'Em': '0432',
-    'Fm': '1013', 'F#m': '2120', 'Gbm': '2120',
-    'Gm': '0231', 'G#m': '4342', 'Abm': '4342',
-    'Am': '2000', 'A#m': '3111', 'Bbm': '3111',
+    'Fm': '1013',
+    'F#m': '2120',
+    'Gbm': '2120',
+    'Gm': '0231',
+    'G#m': '4342',
+    'Abm': '4342',
+    'Am': '2000',
+    'A#m': '3111',
+    'Bbm': '3111',
     'Bm': '4222',
-    'C7': '0001', 'D7': '2223', 'E7': '1202', 'F7': '2310', 'G7': '0212', 'A7': '0100', 'B7': '2322',
-    'Cmaj7': '0002', 'Gmaj7': '0222', 'Amaj7': '1100', 'Dmaj7': '2224', 'Emaj7': '1302', 'Fmaj7': '5557',
+    'C7': '0001',
+    'D7': '2223',
+    'E7': '1202',
+    'F7': '2310',
+    'G7': '0212',
+    'A7': '0100',
+    'B7': '2322',
+    'Cmaj7': '0002',
+    'Gmaj7': '0222',
+    'Amaj7': '1100',
+    'Dmaj7': '2224',
+    'Emaj7': '1302',
+    'Fmaj7': '5557',
   };
 
   /// Clean chord name string
@@ -55,10 +124,25 @@ class ChordHelper {
     if (steps == 0) return chord;
 
     final List<String> notes = [
-      'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+      'C',
+      'C#',
+      'D',
+      'D#',
+      'E',
+      'F',
+      'F#',
+      'G',
+      'G#',
+      'A',
+      'A#',
+      'B',
     ];
     final Map<String, String> flatsToSharps = {
-      'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#',
+      'Db': 'C#',
+      'Eb': 'D#',
+      'Gb': 'F#',
+      'Ab': 'G#',
+      'Bb': 'A#',
     };
 
     final match = RegExp(r'^([A-G][#b]?)(.*)$').firstMatch(chord);
@@ -92,7 +176,11 @@ class ChordHelper {
   }
 
   /// Show interactive chord shape dialog (from uecfi_flutter_app_vanilla)
-  static void showChordDiagram(BuildContext context, String chordRaw, {String instrument = 'Guitar'}) {
+  static void showChordDiagram(
+    BuildContext context,
+    String chordRaw, {
+    String instrument = 'Guitar',
+  }) {
     final chordName = cleanChordName(chordRaw);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -109,8 +197,8 @@ class ChordHelper {
                 color: colorScheme.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                Icons.music_note_rounded,
+              child: AppIcon(
+                icon: HugeIcons.strokeRoundedMusic02,
                 color: colorScheme.primary,
               ),
             ),
@@ -118,7 +206,10 @@ class ChordHelper {
             Expanded(
               child: Text(
                 '$chordName ($instrument)',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
               ),
             ),
           ],
@@ -138,17 +229,17 @@ class ChordHelper {
                   color: colorScheme.outline.withValues(alpha: 0.2),
                 ),
               ),
-              child: ChordDiagram(
-                instrument: instrument,
-                chordName: chordName,
-              ),
+              child: ChordDiagram(instrument: instrument, chordName: chordName),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Close',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -178,7 +269,10 @@ class ChordDiagram extends StatelessWidget {
       baseChord = baseChord.replaceAll(RegExp(r'(add9|dim|aug|m7|7sus4)'), '');
       if (!dict.containsKey(baseChord)) {
         return Center(
-          child: Text('Chord "$chordName" shape not available', textAlign: TextAlign.center),
+          child: Text(
+            'Chord "$chordName" shape not available',
+            textAlign: TextAlign.center,
+          ),
         );
       }
     }
@@ -186,7 +280,9 @@ class ChordDiagram extends StatelessWidget {
     final frets = dict[baseChord]!;
     final isUkulele = instrument == 'Ukulele';
     final numStrings = isUkulele ? 4 : 6;
-    final stringNames = isUkulele ? const ['G', 'C', 'E', 'A'] : const ['E', 'A', 'D', 'G', 'B', 'e'];
+    final stringNames = isUkulele
+        ? const ['G', 'C', 'E', 'A']
+        : const ['E', 'A', 'D', 'G', 'B', 'e'];
 
     return CustomPaint(
       size: const Size(150, 150),
@@ -232,7 +328,11 @@ class _ChordPainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
-    final textStyle = TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.bold);
+    final textStyle = TextStyle(
+      color: textColor,
+      fontSize: 13,
+      fontWeight: FontWeight.bold,
+    );
 
     // Calculate grid dimensions
     final double padding = 20.0;
@@ -250,7 +350,10 @@ class _ChordPainter extends CustomPainter {
         text: TextSpan(text: stringNames[i], style: textStyle),
         textDirection: TextDirection.ltr,
       )..layout();
-      tp.paint(canvas, Offset(padding + i * stringSpacing - tp.width / 2, padding - 20));
+      tp.paint(
+        canvas,
+        Offset(padding + i * stringSpacing - tp.width / 2, padding - 20),
+      );
     }
 
     // Determine the base fret offset
@@ -284,14 +387,20 @@ class _ChordPainter extends CustomPainter {
       canvas.drawLine(
         Offset(padding, padding + headerHeight),
         Offset(padding + width, padding + headerHeight),
-        Paint()..color = textColor..strokeWidth = 5,
+        Paint()
+          ..color = textColor
+          ..strokeWidth = 5,
       );
     } else {
       // Draw offset text indicator
       final tp = TextPainter(
         text: TextSpan(
           text: 'fr ${fretOffset + 1}',
-          style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 12, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -311,11 +420,7 @@ class _ChordPainter extends CustomPainter {
     // Draw horizontal frets
     for (int i = 0; i <= numFrets; i++) {
       double y = padding + headerHeight + i * fretSpacing;
-      canvas.drawLine(
-        Offset(padding, y),
-        Offset(padding + width, y),
-        paint,
-      );
+      canvas.drawLine(Offset(padding, y), Offset(padding + width, y), paint);
     }
 
     // Draw fingers (dots) and mutes (X) or opens (O)
@@ -329,18 +434,48 @@ class _ChordPainter extends CustomPainter {
         // Draw X above nut
         double crossSize = 4.0;
         double cy = padding + headerHeight - 10;
-        canvas.drawLine(Offset(x - crossSize, cy - crossSize), Offset(x + crossSize, cy + crossSize), xPaint);
-        canvas.drawLine(Offset(x + crossSize, cy - crossSize), Offset(x - crossSize, cy + crossSize), xPaint);
+        canvas.drawLine(
+          Offset(x - crossSize, cy - crossSize),
+          Offset(x + crossSize, cy + crossSize),
+          xPaint,
+        );
+        canvas.drawLine(
+          Offset(x + crossSize, cy - crossSize),
+          Offset(x - crossSize, cy + crossSize),
+          xPaint,
+        );
       } else if (fret == 0) {
         // Draw O above nut
-        canvas.drawCircle(Offset(x, padding + headerHeight - 10), 4, Paint()..color = textColor..style = PaintingStyle.stroke..strokeWidth = 1.5);
+        canvas.drawCircle(
+          Offset(x, padding + headerHeight - 10),
+          4,
+          Paint()
+            ..color = textColor
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.5,
+        );
       } else {
         // Draw dot on the fret
         int visualFret = fret - fretOffset;
         if (visualFret > 0 && visualFret <= numFrets) {
-          double y = padding + headerHeight + (visualFret - 1) * fretSpacing + fretSpacing / 2;
+          double y =
+              padding +
+              headerHeight +
+              (visualFret - 1) * fretSpacing +
+              fretSpacing / 2;
           canvas.drawCircle(Offset(x, y), 8, dotPaint);
-          canvas.drawCircle(Offset(x, y), 8, Paint()..color = ThemeData.estimateBrightnessForColor(primaryColor) == Brightness.dark ? Colors.white24 : Colors.black26..style = PaintingStyle.stroke..strokeWidth = 0.5);
+          canvas.drawCircle(
+            Offset(x, y),
+            8,
+            Paint()
+              ..color =
+                  ThemeData.estimateBrightnessForColor(primaryColor) ==
+                      Brightness.dark
+                  ? Colors.white24
+                  : Colors.black26
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 0.5,
+          );
         }
       }
     }

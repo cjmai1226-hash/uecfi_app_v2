@@ -16,6 +16,7 @@ class BylawDetailScreen extends StatefulWidget {
 
 class _BylawDetailScreenState extends State<BylawDetailScreen> {
   double _fontSize = 19.0;
+  bool _showCollapsedTitle = false;
 
   /// Open Font Size Slider Bottom Sheet
   void _showFontSizeSlider(BuildContext context) {
@@ -100,85 +101,161 @@ class _BylawDetailScreenState extends State<BylawDetailScreen> {
     );
   }
 
+  TextSpan _buildFormattedContent(
+    String content,
+    TextStyle baseStyle,
+    Color primaryColor,
+  ) {
+    final regex = RegExp(r'\b(Article\s+\d+)\b', caseSensitive: false);
+    final spans = <InlineSpan>[];
+    int lastIndex = 0;
+
+    for (final match in regex.allMatches(content)) {
+      if (match.start > lastIndex) {
+        spans.add(
+          TextSpan(
+            text: content.substring(lastIndex, match.start),
+            style: baseStyle,
+          ),
+        );
+      }
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
+        ),
+      );
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < content.length) {
+      spans.add(
+        TextSpan(
+          text: content.substring(lastIndex),
+          style: baseStyle,
+        ),
+      );
+    }
+
+    return TextSpan(children: spans);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final bylaw = widget.bylaw;
+    final displayTitle = bylaw.title.isNotEmpty ? bylaw.title : 'Untitled Article';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Image.asset(
-          'assets/images/brand_mark.png',
-          height: 32,
-          width: 32,
-          fit: BoxFit.contain,
-        ),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.format_size_rounded),
-            tooltip: 'Adjust Font Size',
-            onPressed: () => _showFontSizeSlider(context),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              bylaw.title.isNotEmpty
-                  ? bylaw.title
-                  : 'Untitled Article',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // Chapter Badge
-            if (bylaw.chapters != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.brightness == Brightness.dark
-                      ? const Color(0xFF3A3B3C)
-                      : const Color(0xFFE4E6EB),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (notification.metrics.axis == Axis.vertical) {
+            final isCollapsed = notification.metrics.pixels > 40;
+            if (isCollapsed != _showCollapsedTitle) {
+              setState(() {
+                _showCollapsedTitle = isCollapsed;
+              });
+            }
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              elevation: 0,
+              scrolledUnderElevation: 1,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              surfaceTintColor: Colors.transparent,
+              title: AnimatedOpacity(
+                opacity: _showCollapsedTitle ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
                 child: Text(
-                  'CHAPTER ${bylaw.chapters}',
-                  style: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontSize: 12,
+                  displayTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            const SizedBox(height: 20),
-
-            // Main Content Reader
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              child: SelectableText(
-                bylaw.content.isNotEmpty
-                    ? bylaw.content
-                    : 'No text content available for this section.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontSize: _fontSize,
-                  height: 1.8,
-                  color: context.contentColor,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.format_size_rounded),
+                  tooltip: 'Adjust Font Size (${_fontSize.toInt()} px)',
+                  onPressed: () => _showFontSizeSlider(context),
+                ),
+                const SizedBox(width: 4),
+              ],
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayTitle,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        height: 1.35,
+                      ),
+                    ),
+                    if (bylaw.chapters != null) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Text(
+                          'CHAPTER ${bylaw.chapters}',
+                          style: TextStyle(
+                            color: theme.colorScheme.primary,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 40),
+              sliver: SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                  child: SelectableText.rich(
+                    _buildFormattedContent(
+                      bylaw.content.isNotEmpty
+                          ? bylaw.content
+                          : 'No text content available for this section.',
+                      theme.textTheme.bodyLarge?.copyWith(
+                            fontSize: _fontSize,
+                            height: 1.8,
+                            color: context.contentColor,
+                          ) ??
+                          TextStyle(fontSize: _fontSize, height: 1.8),
+                      theme.colorScheme.primary,
+                    ),
+                    textAlign: TextAlign.justify,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -46,7 +46,7 @@ class _SubmitSongScreenState extends State<SubmitSongScreen> {
       _isSubmitting = true;
     });
 
-    final title = _titleController.text.trim();
+    final title = _titleController.text.trim().toUpperCase();
     final author = _authorController.text.trim().isEmpty
         ? 'Unknown'
         : _authorController.text.trim();
@@ -153,8 +153,9 @@ class _SubmitSongScreenState extends State<SubmitSongScreen> {
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _titleController,
+                  textCapitalization: TextCapitalization.characters,
                   decoration: const InputDecoration(
-                    hintText: 'e.g. Amazing Grace',
+                    hintText: 'e.g. AMAZING GRACE',
                   ),
                   validator: (val) {
                     if (val == null || val.trim().isEmpty) {

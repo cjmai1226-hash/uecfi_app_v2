@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_icon.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/database_helper.dart';
 import '../../services/prayer_language_service.dart';
@@ -34,10 +35,7 @@ class SearchResultItem {
 class SearchScreen extends StatefulWidget {
   final SearchCategory initialCategory;
 
-  const SearchScreen({
-    super.key,
-    this.initialCategory = SearchCategory.all,
-  });
+  const SearchScreen({super.key, this.initialCategory = SearchCategory.all});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -79,7 +77,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> _addRecentSearch(String query) async {
     final cleanQuery = query.trim();
     if (cleanQuery.isEmpty) return;
-    
+
     setState(() {
       _recentSearches.remove(cleanQuery);
       _recentSearches.insert(0, cleanQuery);
@@ -87,7 +85,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _recentSearches = _recentSearches.sublist(0, 8);
       }
     });
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(_recentSearchesKey, _recentSearches);
@@ -152,7 +150,8 @@ class _SearchScreenState extends State<SearchScreen> {
       final activeLang = PrayerLanguageService.instance.value;
 
       // 1. Search Centers
-      if (_selectedCategory == SearchCategory.all || _selectedCategory == SearchCategory.centers) {
+      if (_selectedCategory == SearchCategory.all ||
+          _selectedCategory == SearchCategory.centers) {
         for (var center in _allCenters) {
           if (center.name.toLowerCase().contains(_searchQuery) ||
               center.address.toLowerCase().contains(_searchQuery) ||
@@ -163,7 +162,9 @@ class _SearchScreenState extends State<SearchScreen> {
               SearchResultItem(
                 type: SearchResultType.center,
                 title: center.name,
-                subtitle: center.address.isNotEmpty ? center.address : 'District: ${center.district}',
+                subtitle: center.address.isNotEmpty
+                    ? center.address
+                    : 'District: ${center.district}',
                 badge: center.district.isNotEmpty ? center.district : null,
                 data: center,
               ),
@@ -173,7 +174,8 @@ class _SearchScreenState extends State<SearchScreen> {
       }
 
       // 2. Search Songs
-      if (_selectedCategory == SearchCategory.all || _selectedCategory == SearchCategory.songs) {
+      if (_selectedCategory == SearchCategory.all ||
+          _selectedCategory == SearchCategory.songs) {
         for (var song in _allSongs) {
           if (song.title.toLowerCase().contains(_searchQuery) ||
               song.author.toLowerCase().contains(_searchQuery) ||
@@ -184,8 +186,12 @@ class _SearchScreenState extends State<SearchScreen> {
               SearchResultItem(
                 type: SearchResultType.song,
                 title: song.title,
-                subtitle: song.author.isNotEmpty ? 'By ${song.author}' : _previewText(song.content),
-                badge: song.category.isNotEmpty ? song.category : (song.hasChords ? 'Chords' : null),
+                subtitle: song.author.isNotEmpty
+                    ? 'By ${song.author}'
+                    : _previewText(song.content),
+                badge: song.category.isNotEmpty
+                    ? song.category
+                    : (song.hasChords ? 'Chords' : null),
                 data: song,
               ),
             );
@@ -194,7 +200,8 @@ class _SearchScreenState extends State<SearchScreen> {
       }
 
       // 3. Search Prayers
-      if (_selectedCategory == SearchCategory.all || _selectedCategory == SearchCategory.prayers) {
+      if (_selectedCategory == SearchCategory.all ||
+          _selectedCategory == SearchCategory.prayers) {
         for (var prayer in _allPrayers) {
           final displayTitle = prayer.getDisplayTitle(activeLang);
           final displayContent = prayer.getDisplayContent(activeLang);
@@ -207,7 +214,9 @@ class _SearchScreenState extends State<SearchScreen> {
             results.add(
               SearchResultItem(
                 type: SearchResultType.prayer,
-                title: displayTitle.isNotEmpty ? displayTitle : 'Untitled Prayer',
+                title: displayTitle.isNotEmpty
+                    ? displayTitle
+                    : 'Untitled Prayer',
                 subtitle: _previewText(displayContent),
                 badge: prayer.page != null ? 'Page ${prayer.page}' : null,
                 data: prayer,
@@ -218,11 +227,13 @@ class _SearchScreenState extends State<SearchScreen> {
       }
 
       // 4. Search Bylaws
-      if (_selectedCategory == SearchCategory.all || _selectedCategory == SearchCategory.bylaws) {
+      if (_selectedCategory == SearchCategory.all ||
+          _selectedCategory == SearchCategory.bylaws) {
         for (var bylaw in _allBylaws) {
           if (bylaw.title.toLowerCase().contains(_searchQuery) ||
               bylaw.content.toLowerCase().contains(_searchQuery) ||
-              (bylaw.chapters != null && bylaw.chapterTag.toLowerCase().contains(_searchQuery))) {
+              (bylaw.chapters != null &&
+                  bylaw.chapterTag.toLowerCase().contains(_searchQuery))) {
             results.add(
               SearchResultItem(
                 type: SearchResultType.bylaw,
@@ -275,12 +286,16 @@ class _SearchScreenState extends State<SearchScreen> {
     if (item.type == SearchResultType.center) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => CenterDetailScreen(center: item.data as CenterModel),
+          builder: (context) =>
+              CenterDetailScreen(center: item.data as CenterModel),
         ),
       );
     } else if (item.type == SearchResultType.song) {
       final targetSong = item.data as SongModel;
-      final matchedSongs = _searchResults.where((r) => r.type == SearchResultType.song).map((r) => r.data as SongModel).toList();
+      final matchedSongs = _searchResults
+          .where((r) => r.type == SearchResultType.song)
+          .map((r) => r.data as SongModel)
+          .toList();
       final idx = matchedSongs.indexOf(targetSong);
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -292,7 +307,10 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     } else if (item.type == SearchResultType.prayer) {
       final targetPrayer = item.data as PrayerModel;
-      final matchedPrayers = _searchResults.where((r) => r.type == SearchResultType.prayer).map((r) => r.data as PrayerModel).toList();
+      final matchedPrayers = _searchResults
+          .where((r) => r.type == SearchResultType.prayer)
+          .map((r) => r.data as PrayerModel)
+          .toList();
       final idx = matchedPrayers.indexOf(targetPrayer);
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -306,9 +324,7 @@ class _SearchScreenState extends State<SearchScreen> {
       final targetBylaw = item.data as BylawModel;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => BylawDetailScreen(
-            bylaw: targetBylaw,
-          ),
+          builder: (context) => BylawDetailScreen(bylaw: targetBylaw),
         ),
       );
     }
@@ -354,8 +370,8 @@ class _SearchScreenState extends State<SearchScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.search_rounded,
+                  AppIcon(
+                    icon: HugeIcons.strokeRoundedSearch01,
                     size: 20,
                     color: theme.colorScheme.primary,
                   ),
@@ -380,8 +396,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         contentPadding: EdgeInsets.zero,
                         isDense: true,
                         hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.textTheme.bodySmall?.color
-                              ?.withValues(alpha: 0.6),
+                          color: theme.textTheme.bodySmall?.color?.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                       style: theme.textTheme.bodyLarge,
@@ -393,8 +410,8 @@ class _SearchScreenState extends State<SearchScreen> {
                         _searchController.clear();
                         _performSearch('');
                       },
-                      child: Icon(
-                        Icons.clear_rounded,
+                      child: AppIcon(
+                        icon: HugeIcons.strokeRoundedCancel01,
                         size: 18,
                         color: theme.textTheme.bodySmall?.color,
                       ),
@@ -428,19 +445,19 @@ class _SearchScreenState extends State<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _searchQuery.isEmpty
-                    ? _recentSearches.isNotEmpty
-                        ? _buildRecentSearchesView(theme)
-                        : _buildEmptyPlaceholder(theme)
-                    : _searchResults.isEmpty
-                        ? _buildNoResultsPlaceholder(theme)
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _searchResults.length,
-                            itemBuilder: (context, index) {
-                              final item = _searchResults[index];
-                              return _buildResultCard(context, item);
-                            },
-                          ),
+                ? _recentSearches.isNotEmpty
+                      ? _buildRecentSearchesView(theme)
+                      : _buildEmptyPlaceholder(theme)
+                : _searchResults.isEmpty
+                ? _buildNoResultsPlaceholder(theme)
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _searchResults.length,
+                    itemBuilder: (context, index) {
+                      final item = _searchResults[index];
+                      return _buildResultCard(context, item);
+                    },
+                  ),
           ),
         ],
       ),
@@ -508,13 +525,17 @@ class _SearchScreenState extends State<SearchScreen> {
         Divider(color: theme.dividerColor, height: 1),
         ..._recentSearches.map((query) {
           return ListTile(
-            leading: Icon(
-              Icons.history_rounded,
+            leading: AppIcon(
+              icon: HugeIcons.strokeRoundedClock01,
               color: theme.disabledColor,
+              size: 20,
             ),
             title: Text(query),
             trailing: IconButton(
-              icon: const Icon(Icons.close_rounded, size: 18),
+              icon: const AppIcon(
+                icon: HugeIcons.strokeRoundedCancel01,
+                size: 18,
+              ),
               onPressed: () => _deleteRecentSearch(query),
               splashRadius: 20,
             ),
@@ -535,8 +556,8 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.search_rounded,
+            AppIcon(
+              icon: HugeIcons.strokeRoundedSearch01,
               size: 64,
               color: theme.colorScheme.primary.withValues(alpha: 0.3),
             ),
@@ -564,16 +585,13 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.sentiment_dissatisfied_rounded,
+          AppIcon(
+            icon: HugeIcons.strokeRoundedSad01,
             size: 48,
             color: theme.textTheme.bodySmall?.color,
           ),
           const SizedBox(height: 12),
-          Text(
-            'No matching results found',
-            style: theme.textTheme.titleMedium,
-          ),
+          Text('No matching results found', style: theme.textTheme.titleMedium),
           const SizedBox(height: 4),
           Text(
             'Try searching with a different term or category',
@@ -588,28 +606,28 @@ class _SearchScreenState extends State<SearchScreen> {
     final theme = Theme.of(context);
 
     Color typeColor;
-    IconData typeIcon;
+    List<List<dynamic>> typeIcon;
     String typeLabel;
 
     switch (item.type) {
       case SearchResultType.song:
         typeColor = const Color(0xFF0084FF); // Messenger Blue-Cyan
-        typeIcon = Icons.music_note_rounded;
+        typeIcon = HugeIcons.strokeRoundedMusic02;
         typeLabel = 'SONG';
         break;
       case SearchResultType.prayer:
         typeColor = const Color(0xFF8A3AB9); // Messenger Purple
-        typeIcon = Icons.import_contacts_rounded;
+        typeIcon = HugeIcons.strokeRoundedBookOpen01;
         typeLabel = 'PRAYER';
         break;
       case SearchResultType.bylaw:
         typeColor = const Color(0xFFD97706); // Warm Amber
-        typeIcon = Icons.description_rounded;
+        typeIcon = HugeIcons.strokeRoundedLegalDocument01;
         typeLabel = 'BYLAW';
         break;
       case SearchResultType.center:
         typeColor = theme.colorScheme.primary; // Facebook Blue
-        typeIcon = Icons.church_rounded;
+        typeIcon = HugeIcons.strokeRoundedChurch;
         typeLabel = 'CENTER';
         break;
     }
@@ -629,7 +647,10 @@ class _SearchScreenState extends State<SearchScreen> {
                 children: [
                   // Type Icon & Pill Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: typeColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
@@ -637,7 +658,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(typeIcon, size: 13, color: typeColor),
+                        AppIcon(icon: typeIcon, size: 13, color: typeColor),
                         const SizedBox(width: 4),
                         Text(
                           typeLabel,
@@ -653,12 +674,19 @@ class _SearchScreenState extends State<SearchScreen> {
                   if (item.badge != null) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.2) ?? Colors.grey,
+                          color:
+                              theme.textTheme.bodySmall?.color?.withValues(
+                                alpha: 0.2,
+                              ) ??
+                              Colors.grey,
                           width: 1,
                         ),
                       ),

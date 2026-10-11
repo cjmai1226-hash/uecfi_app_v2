@@ -1,53 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/theme_service.dart';
-
-enum AppThemeColor {
-  electricViolet,
-  googleAI,
-}
-
 class AppTheme {
   static bool isDark = false;
 
-  static ThemeData get lightTheme =>
-      getLightTheme(ThemeService.instance.themeColor);
+  static ThemeData get lightTheme => getLightTheme();
 
-  static ThemeData get darkTheme =>
-      getDarkTheme(ThemeService.instance.themeColor);
+  static ThemeData get darkTheme => getDarkTheme();
 
-  static ThemeData getLightTheme([AppThemeColor colorTheme = AppThemeColor.electricViolet]) {
-    final Color primary;
-    final Color secondary;
-    final Color background;
-    final Color card;
-    final Color text;
-    final Color textSecondary;
-    final Color borderLight;
-    final Color errorColor;
-
-    switch (colorTheme) {
-      case AppThemeColor.googleAI:
-        primary = const Color(0xFF1A73E8); // Google AI Royal Blue
-        secondary = const Color(0xFF7C3AED); // Gemini AI Violet
-        background = const Color(0xFFF8F9FA); // Google Cloud Light
-        card = const Color(0xFFFFFFFF);
-        text = const Color(0xFF1F1F1F);
-        textSecondary = const Color(0xFF5F6368);
-        borderLight = const Color(0xFFE8EAED);
-        errorColor = const Color(0xFFEA4335);
-        break;
-      case AppThemeColor.electricViolet:
-        primary = const Color(0xFFA100FF); // Accenture Electric Violet
-        secondary = const Color(0xFF7500C0); // Deep Violet Accent
-        background = const Color(0xFFF7F7FA); // Architectural Studio Light Gray
-        card = const Color(0xFFFFFFFF);
-        text = const Color(0xFF0E0E14); // Ultra-crisp Onyx Text
-        textSecondary = const Color(0xFF6E6E82); // Refined Slate Gray Text
-        borderLight = const Color(0xFFE5E5ED); // Crisp High-Tech Border
-        errorColor = const Color(0xFFFF2A55);
-        break;
-    }
+  static ThemeData getLightTheme() {
+    const primary = Color(0xFF1A73E8); // Google AI Royal Blue
+    const secondary = Color(0xFF7C3AED); // Gemini AI Violet
+    const background = Color(0xFFF8F9FA); // Google Cloud Light
+    const card = Color(0xFFFFFFFF);
+    const text = Color(0xFF1F1F1F);
+    const textSecondary = Color(0xFF5F6368);
+    const borderLight = Color(0xFFE8EAED);
+    const errorColor = Color(0xFFEA4335);
 
     return ThemeData(
       useMaterial3: true,
@@ -77,7 +45,7 @@ class AppTheme {
         centerTitle: true,
         iconTheme: IconThemeData(color: text),
         titleTextStyle: GoogleFonts.plusJakartaSans(
-          color: text,
+          color: primary,
           fontSize: 20,
           fontWeight: FontWeight.bold,
           letterSpacing: 0.3,
@@ -211,38 +179,15 @@ class AppTheme {
     );
   }
 
-  static ThemeData getDarkTheme([AppThemeColor colorTheme = AppThemeColor.electricViolet]) {
-    final Color darkPrimary;
-    final Color darkSecondary;
-    final Color darkBackground;
-    final Color darkCard;
-    final Color darkText;
-    final Color darkTextSecondary;
-    final Color darkBorder;
-    final Color darkError;
-
-    switch (colorTheme) {
-      case AppThemeColor.googleAI:
-        darkPrimary = const Color(0xFF4285F4); // Google AI Vibrant Blue
-        darkSecondary = const Color(0xFF9334E6); // Gemini AI Sparkle Purple
-        darkBackground = const Color(0xFF131314); // Google Gemini Dark Obsidian
-        darkCard = const Color(0xFF1E1F20); // Google Gemini Card Surface
-        darkText = const Color(0xFFE3E3E3); // Google Titanium White
-        darkTextSecondary = const Color(0xFF9AA0A6); // Google Cool Slate
-        darkBorder = const Color(0xFF333538); // Google Precision Dark Border
-        darkError = const Color(0xFFF28B82);
-        break;
-      case AppThemeColor.electricViolet:
-        darkPrimary = const Color(0xFFA100FF); // Accenture Electric Violet
-        darkSecondary = const Color(0xFF00E5FF); // Cyber Cyan Accent
-        darkBackground = const Color(0xFF0D0D12); // Deep Obsidian Dark Mode
-        darkCard = const Color(0xFF16161F); // Dark Graphite Slate Card
-        darkText = const Color(0xFFF5F5FA); // High Contrast Pristine Text
-        darkTextSecondary = const Color(0xFF9E9EAF); // Purple-Tinted Gray Text
-        darkBorder = const Color(0xFF262633); // Subtle Precision Border
-        darkError = const Color(0xFFFF2A55);
-        break;
-    }
+  static ThemeData getDarkTheme() {
+    const darkPrimary = Color(0xFF4285F4); // Google AI Vibrant Blue
+    const darkSecondary = Color(0xFF9334E6); // Gemini AI Sparkle Purple
+    const darkBackground = Color(0xFF131314); // Google Gemini Dark Obsidian
+    const darkCard = Color(0xFF1E1F20); // Google Gemini Card Surface
+    const darkText = Color(0xFFE3E3E3); // Google Titanium White
+    const darkTextSecondary = Color(0xFF9AA0A6); // Google Cool Slate
+    const darkBorder = Color(0xFF333538); // Google Precision Dark Border
+    const darkError = Color(0xFFF28B82);
 
     return ThemeData(
       useMaterial3: true,

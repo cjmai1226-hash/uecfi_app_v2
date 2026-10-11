@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'app_icon.dart';
 
 class SparklingTrophyIcon extends StatefulWidget {
   final bool isSelected;
@@ -76,10 +77,8 @@ class _SparklingTrophyIconState extends State<SparklingTrophyIcon>
               alignment: Alignment.center,
               children: [
                 // Main Trophy Icon
-                Icon(
-                  widget.isSelected
-                      ? Icons.emoji_events_rounded
-                      : Icons.emoji_events_outlined,
+                AppIcon(
+                  icon: HugeIcons.strokeRoundedAward01,
                   size: widget.size,
                   color: widget.isSelected ? Colors.amber.shade600 : iconColor,
                 ),
@@ -95,8 +94,8 @@ class _SparklingTrophyIconState extends State<SparklingTrophyIcon>
                         angle: s1Progress * math.pi * 0.5,
                         child: Opacity(
                           opacity: s1Opacity,
-                          child: Icon(
-                            Icons.auto_awesome,
+                          child: AppIcon(
+                            icon: HugeIcons.strokeRoundedSparkles,
                             size: 11,
                             color: widget.isSelected
                                 ? Colors.amberAccent
@@ -118,8 +117,8 @@ class _SparklingTrophyIconState extends State<SparklingTrophyIcon>
                         angle: -s2Progress * math.pi * 0.4,
                         child: Opacity(
                           opacity: s2Opacity,
-                          child: Icon(
-                            Icons.auto_awesome,
+                          child: AppIcon(
+                            icon: HugeIcons.strokeRoundedSparkles,
                             size: 9,
                             color: widget.isSelected
                                 ? Colors.amberAccent.shade100
