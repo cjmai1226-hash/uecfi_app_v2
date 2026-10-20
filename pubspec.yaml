@@ -1,7 +1,7 @@
 name: uecfi_app_v2
 description: "Legacy Project for uecfi_app_vanilla"
 publish_to: 'none'
-version: 2.1.8+49
+version: 2.1.9+50
 
 environment:
   sdk: ^3.11.5
