@@ -178,7 +178,6 @@ class _SongsScreenState extends State<SongsScreen> {
         icon: const AppIcon(
           icon: HugeIcons.strokeRoundedBookmark02,
           size: 20,
-          color: Colors.white,
         ),
         label: const Text('Bookmarks'),
       ),

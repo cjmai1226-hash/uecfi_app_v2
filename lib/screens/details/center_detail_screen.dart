@@ -6,7 +6,7 @@ import '../../models/user_profile.dart';
 import '../../services/firestore_service.dart';
 import '../../services/user_service.dart';
 import '../features/profile_screen.dart';
-import '../features/public_profile_screen.dart';
+import '../../widgets/public_profile_sheet.dart';
 import 'suggest_center_edit_sheet.dart';
 import '../../widgets/user_avatar.dart';
 
@@ -302,16 +302,13 @@ class CenterDetailScreen extends StatelessWidget {
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
     } else {
-      Navigator.push(
+      PublicProfileSheet.show(
         context,
-        MaterialPageRoute(
-          builder: (context) => PublicProfileScreen(
-            userEmail: email,
-            initialNickname: nickname,
-            initialAvatarUrl: avatarUrl,
-            initialLocalCenter: localCenter ?? center.name,
-          ),
-        ),
+        userEmail: email,
+        initialNickname: nickname,
+        initialAvatarUrl: avatarUrl,
+        initialLocalCenter: localCenter ?? center.name,
+        initialCenterAddress: center.address,
       );
     }
   }

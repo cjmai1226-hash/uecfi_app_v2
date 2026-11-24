@@ -5,7 +5,7 @@ import '../models/blog_post.dart';
 import '../models/user_profile.dart';
 import '../services/firestore_service.dart';
 import '../services/user_service.dart';
-import '../screens/features/public_profile_screen.dart';
+import 'public_profile_sheet.dart';
 import '../screens/features/profile_screen.dart';
 import '../screens/forms/create_post_screen.dart';
 import 'user_avatar.dart';
@@ -73,15 +73,11 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
       );
     } else {
-      Navigator.push(
+      PublicProfileSheet.show(
         context,
-        MaterialPageRoute(
-          builder: (context) => PublicProfileScreen(
-            userEmail: authorEmail,
-            initialNickname: authorName,
-            initialAvatarUrl: avatarUrl,
-          ),
-        ),
+        userEmail: authorEmail,
+        initialNickname: authorName,
+        initialAvatarUrl: avatarUrl,
       );
     }
   }

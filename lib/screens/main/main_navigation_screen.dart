@@ -32,7 +32,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final primaryColor = theme.colorScheme.primary;
+    final selectedIconColor = isDark ? primaryColor : const Color(0xFF041E49);
     final unselectedColor = theme.hintColor;
 
     return Scaffold(
@@ -231,7 +233,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             selectedIcon: AppIcon(
               icon: HugeIcons.strokeRoundedHome01,
               size: 24,
-              color: primaryColor,
+              color: selectedIconColor,
             ),
             label: 'Home',
           ),
@@ -244,7 +246,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             selectedIcon: AppIcon(
               icon: HugeIcons.strokeRoundedHandPrayer,
               size: 24,
-              color: primaryColor,
+              color: selectedIconColor,
             ),
             label: 'Prayers',
           ),
@@ -257,7 +259,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             selectedIcon: AppIcon(
               icon: HugeIcons.strokeRoundedMusic02,
               size: 24,
-              color: primaryColor,
+              color: selectedIconColor,
             ),
             label: 'Songs',
           ),
@@ -270,7 +272,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             selectedIcon: AppIcon(
               icon: HugeIcons.strokeRoundedMapsGlobal01,
               size: 24,
-              color: primaryColor,
+              color: selectedIconColor,
             ),
             label: 'Centers',
           ),

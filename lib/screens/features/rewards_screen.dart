@@ -698,14 +698,14 @@ class _RewardsScreenState extends State<RewardsScreen> {
                         height: 36,
                         decoration: BoxDecoration(
                           color: const Color(
-                            0xFF1A73E8,
+                            0xFF0B57D0,
                           ).withValues(alpha: isDark ? 0.22 : 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Center(
                           child: AppIcon(
                             icon: HugeIcons.strokeRoundedAward01,
-                            color: Color(0xFF1A73E8),
+                            color: Color(0xFF0B57D0),
                             size: 18,
                           ),
                         ),
@@ -788,7 +788,7 @@ class _RewardsScreenState extends State<RewardsScreen> {
                     theme: theme,
                     isDark: isDark,
                     icon: HugeIcons.strokeRoundedMusic02,
-                    iconBgColor: const Color(0xFF1A73E8), // Google Blue
+                    iconBgColor: const Color(0xFF0B57D0), // Google Blue
                     title: '5 Dev Coins per Approved Worship Song',
                     subtitle:
                         'Awarded once submitted chords and lyrics are verified by the admin team.',
@@ -1465,13 +1465,13 @@ class _RewardsScreenState extends State<RewardsScreen> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: const Color(
-                      0xFF1A73E8,
+                      0xFF0B57D0,
                     ).withValues(alpha: isDark ? 0.25 : 0.15),
                     shape: BoxShape.circle,
                   ),
                   child: const AppIcon(
                     icon: HugeIcons.strokeRoundedInformationCircle,
-                    color: Color(0xFF1A73E8),
+                    color: Color(0xFF0B57D0),
                     size: 18,
                   ),
                 ),
